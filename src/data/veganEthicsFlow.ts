@@ -1,0 +1,280 @@
+import type { ThoughtFlowFlow } from "../types/flow";
+
+export const veganEthicsFlow: ThoughtFlowFlow = {
+  id: "vegan-ethics-demo",
+  title: "Is Taste Enough?",
+  description:
+    "A short guided reasoning flow about taste, harm, necessity, and consistency.",
+  tags: ["veganism", "ethics", "education", "critical thinking"],
+  startNodeId: "taste",
+  nodes: {
+    taste: {
+      id: "taste",
+      title: "Is taste enough?",
+      text: "Is it okay to harm an animal mainly because we enjoy the taste?",
+      type: "question",
+      choices: [
+        {
+          id: "taste-no",
+          label: "No, taste alone is not enough",
+          targetNodeId: "necessity",
+        },
+        {
+          id: "taste-yes",
+          label: "Yes, taste can justify it",
+          targetNodeId: "dog-test",
+        },
+        {
+          id: "taste-depends",
+          label: "Depends on the animal",
+          targetNodeId: "animal-difference",
+        },
+      ],
+    },
+    necessity: {
+      id: "necessity",
+      title: "Preference or necessity?",
+      text: "If taste alone is not enough, what changes when eating animals is no longer necessary for health or survival?",
+      type: "question",
+      choices: [
+        {
+          id: "necessity-alternatives",
+          label: "Alternatives matter",
+          targetNodeId: "alternatives",
+        },
+        {
+          id: "necessity-survival",
+          label: "Survival cases are different",
+          targetNodeId: "survival",
+        },
+      ],
+    },
+    "dog-test": {
+      id: "dog-test",
+      title: "The dog test",
+      text: "If someone enjoyed the taste of dog meat, would that pleasure be enough to justify killing a healthy dog?",
+      type: "question",
+      choices: [
+        {
+          id: "dog-no",
+          label: "No, that still seems wrong",
+          targetNodeId: "consistency",
+        },
+        {
+          id: "dog-yes",
+          label: "Yes, if they really enjoy it",
+          targetNodeId: "pleasure-limit",
+        },
+      ],
+    },
+    "animal-difference": {
+      id: "animal-difference",
+      title: "Which difference matters?",
+      text: "If dogs and pigs are treated differently, what morally relevant trait explains the difference?",
+      type: "question",
+      choices: [
+        {
+          id: "diff-intelligence",
+          label: "Intelligence",
+          targetNodeId: "intelligence",
+        },
+        {
+          id: "diff-culture",
+          label: "Culture and habit",
+          targetNodeId: "culture",
+        },
+        {
+          id: "diff-feeling",
+          label: "Ability to feel matters most",
+          targetNodeId: "sentience",
+        },
+      ],
+    },
+    alternatives: {
+      id: "alternatives",
+      title: "Available alternatives",
+      text: "When plant-based meals can meet the same need, the choice becomes less about survival and more about preference.",
+      type: "claim",
+      choices: [
+        {
+          id: "alts-consistency",
+          label: "So consistency becomes the key question",
+          targetNodeId: "consistency",
+        },
+        {
+          id: "alts-reflect",
+          label: "That changes the weight of taste",
+          targetNodeId: "taste-weight",
+        },
+      ],
+    },
+    survival: {
+      id: "survival",
+      title: "Edge cases",
+      text: "Survival cases may justify things that ordinary preference does not. Most daily food choices are not survival emergencies.",
+      type: "reflection",
+      choices: [
+        {
+          id: "survival-normal",
+          label: "Return to ordinary choices",
+          targetNodeId: "alternatives",
+        },
+      ],
+    },
+    consistency: {
+      id: "consistency",
+      title: "Consistency check",
+      text: "If two animals can suffer similarly, should similar interests receive similar moral consideration?",
+      type: "question",
+      choices: [
+        {
+          id: "consistency-yes",
+          label: "Yes, similar suffering matters similarly",
+          targetNodeId: "sentience",
+        },
+        {
+          id: "consistency-no",
+          label: "No, category matters more",
+          targetNodeId: "category",
+        },
+      ],
+    },
+    "pleasure-limit": {
+      id: "pleasure-limit",
+      title: "Limits of pleasure",
+      text: "Most ethics place limits on pleasure when another being is seriously harmed. Where would you draw that line?",
+      type: "question",
+      choices: [
+        {
+          id: "limit-harm",
+          label: "Harm needs stronger justification",
+          targetNodeId: "taste-weight",
+        },
+        {
+          id: "limit-none",
+          label: "I would allow most preference-based harm",
+          targetNodeId: "hard-conclusion",
+        },
+      ],
+    },
+    intelligence: {
+      id: "intelligence",
+      title: "Intelligence as a test",
+      text: "If intelligence decides moral worth, do less intelligent humans deserve less protection from harm?",
+      type: "question",
+      choices: [
+        {
+          id: "intel-no",
+          label: "No, that standard is risky",
+          targetNodeId: "sentience",
+        },
+        {
+          id: "intel-yes",
+          label: "Maybe intelligence changes obligations",
+          targetNodeId: "category",
+        },
+      ],
+    },
+    culture: {
+      id: "culture",
+      title: "Culture explains, but does it justify?",
+      text: "Culture can explain why a practice feels normal. Does normality itself make the practice ethical?",
+      type: "question",
+      choices: [
+        {
+          id: "culture-no",
+          label: "No, normal is not the same as right",
+          targetNodeId: "consistency",
+        },
+        {
+          id: "culture-maybe",
+          label: "It still carries some weight",
+          targetNodeId: "category",
+        },
+      ],
+    },
+    sentience: {
+      id: "sentience",
+      title: "Sentience",
+      text: "If the central issue is the ability to suffer, then pigs, cows, chickens, dogs, and many other animals belong inside the moral circle.",
+      type: "claim",
+      choices: [
+        {
+          id: "sentience-next",
+          label: "Then ask what justification remains",
+          targetNodeId: "taste-weight",
+        },
+      ],
+    },
+    category: {
+      id: "category",
+      title: "Categories and circles",
+      text: "Categories can guide affection and responsibility, but they can also hide inconsistent treatment of similar suffering.",
+      type: "reflection",
+      choices: [
+        {
+          id: "category-consistency",
+          label: "Test the category against suffering",
+          targetNodeId: "sentience",
+        },
+        {
+          id: "category-finish",
+          label: "I still prioritize human categories",
+          targetNodeId: "open-question",
+        },
+      ],
+    },
+    "taste-weight": {
+      id: "taste-weight",
+      title: "What is taste worth?",
+      text: "Taste has value. The question is whether a brief preference outweighs an animal's entire experience of confinement, fear, and death.",
+      type: "reflection",
+      choices: [
+        {
+          id: "taste-finish",
+          label: "That points toward avoiding unnecessary harm",
+          targetNodeId: "gentle-conclusion",
+        },
+        {
+          id: "taste-input",
+          label: "I would want to write my own threshold",
+          targetNodeId: "future-input",
+        },
+      ],
+    },
+    "gentle-conclusion": {
+      id: "gentle-conclusion",
+      title: "A practical conclusion",
+      text: "If unnecessary harm is avoidable, reducing or replacing animal products becomes a consistent way to act on that reasoning.",
+      type: "conclusion",
+      choices: [],
+    },
+    "hard-conclusion": {
+      id: "hard-conclusion",
+      title: "A demanding position",
+      text: "Allowing preference-based harm is consistent, but it asks us to accept many harms we usually reject in other contexts.",
+      type: "conclusion",
+      choices: [],
+    },
+    "open-question": {
+      id: "open-question",
+      title: "Open question",
+      text: "If category membership matters most, the next step is explaining why that category should override comparable suffering.",
+      type: "conclusion",
+      choices: [],
+    },
+    "future-input": {
+      id: "future-input",
+      title: "Input node placeholder",
+      text: "Future versions will let viewers write a personal threshold here, then route the flow based on their answer.",
+      type: "input-placeholder",
+      choices: [
+        {
+          id: "input-finish",
+          label: "For now, continue",
+          targetNodeId: "gentle-conclusion",
+        },
+      ],
+    },
+  },
+};

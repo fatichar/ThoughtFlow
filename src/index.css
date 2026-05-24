@@ -1,0 +1,122 @@
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,650;9..144,800&family=Manrope:wght@500;650;700;800&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+  font-family: "Manrope", ui-sans-serif, system-ui, sans-serif;
+  background: #f4f1e8;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+button {
+  font: inherit;
+}
+
+.icon-button {
+  @apply grid h-10 w-10 place-items-center rounded-sm border border-ink/10 bg-white/45 text-ink transition duration-200 hover:-translate-y-0.5 hover:border-moss/40 hover:bg-white hover:text-moss;
+}
+
+.reasoning-node {
+  @apply w-[360px] border bg-[#fffdf7] p-5 text-left shadow-node transition-colors duration-300;
+  border-radius: 6px;
+}
+
+.reasoning-node-current {
+  @apply border-moss shadow-active;
+}
+
+.reasoning-node-current::before {
+  content: "";
+  position: absolute;
+  inset: -8px;
+  z-index: -1;
+  border: 1px solid rgba(126, 160, 90, 0.34);
+  border-radius: 8px;
+  background: rgba(126, 160, 90, 0.08);
+}
+
+.reasoning-node-visited {
+  @apply bg-[#f9f3e4];
+  border-color: rgba(35, 37, 34, 0.12);
+}
+
+.choice-button {
+  @apply flex min-h-12 w-full items-center justify-between gap-3 rounded-sm border border-ink/10 bg-[#f7f1e3] px-4 py-3 text-left text-sm font-extrabold leading-5 text-ink transition duration-200 hover:-translate-y-0.5 hover:border-moss/50 hover:bg-white hover:text-moss disabled:cursor-default disabled:hover:translate-y-0;
+}
+
+.choice-button-selected {
+  @apply border-moss bg-moss text-canvas hover:bg-moss hover:text-canvas;
+}
+
+.choice-button-soft {
+  @apply opacity-45;
+}
+
+.flow-handle {
+  width: 8px !important;
+  height: 8px !important;
+  border: 0 !important;
+  background: #536b4f !important;
+}
+
+.react-flow__node {
+  z-index: 1;
+}
+
+.react-flow__node.selected {
+  box-shadow: none !important;
+}
+
+.react-flow__pane {
+  cursor: grab;
+}
+
+.react-flow__pane:active {
+  cursor: grabbing;
+}
+
+.edge-path {
+  stroke: #536b4f;
+  stroke-width: 3;
+  stroke-linecap: round;
+  fill: none;
+  opacity: 0.62;
+}
+
+.edge-path-active {
+  stroke: #b15f43;
+  opacity: 1;
+  stroke-dasharray: 700;
+  stroke-dashoffset: 700;
+  animation: draw-edge 760ms ease-out forwards, edge-pulse 1.2s ease-out 760ms;
+}
+
+@keyframes draw-edge {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes edge-pulse {
+  0% {
+    filter: drop-shadow(0 0 0 rgba(177, 95, 67, 0));
+  }
+  35% {
+    filter: drop-shadow(0 0 10px rgba(177, 95, 67, 0.55));
+  }
+  100% {
+    filter: drop-shadow(0 0 0 rgba(177, 95, 67, 0));
+  }
+}
