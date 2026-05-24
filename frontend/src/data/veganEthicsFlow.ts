@@ -94,7 +94,7 @@ export const veganEthicsFlow: ThoughtFlowFlow = {
       id: "alternatives",
       title: "Available alternatives",
       text: "When plant-based meals can meet the same need, the choice becomes less about survival and more about preference.",
-      type: "claim",
+      type: "information",
       choices: [
         {
           id: "alts-consistency",
@@ -112,7 +112,7 @@ export const veganEthicsFlow: ThoughtFlowFlow = {
       id: "survival",
       title: "Edge cases",
       text: "Survival cases may justify things that ordinary preference does not. Most daily food choices are not survival emergencies.",
-      type: "reflection",
+      type: "information",
       choices: [
         {
           id: "survival-normal",
@@ -197,7 +197,7 @@ export const veganEthicsFlow: ThoughtFlowFlow = {
       id: "sentience",
       title: "Sentience",
       text: "If the central issue is the ability to suffer, then pigs, cows, chickens, dogs, and many other animals belong inside the moral circle.",
-      type: "claim",
+      type: "information",
       choices: [
         {
           id: "sentience-next",
@@ -210,7 +210,7 @@ export const veganEthicsFlow: ThoughtFlowFlow = {
       id: "category",
       title: "Categories and circles",
       text: "Categories can guide affection and responsibility, but they can also hide inconsistent treatment of similar suffering.",
-      type: "reflection",
+      type: "information",
       choices: [
         {
           id: "category-consistency",
@@ -228,7 +228,7 @@ export const veganEthicsFlow: ThoughtFlowFlow = {
       id: "taste-weight",
       title: "What is taste worth?",
       text: "Taste has value. The question is whether a brief preference outweighs an animal's entire experience of confinement, fear, and death.",
-      type: "reflection",
+      type: "information",
       choices: [
         {
           id: "taste-finish",
@@ -247,27 +247,45 @@ export const veganEthicsFlow: ThoughtFlowFlow = {
       title: "A practical conclusion",
       text: "If unnecessary harm is avoidable, reducing or replacing animal products becomes a consistent way to act on that reasoning.",
       type: "conclusion",
-      choices: [],
+      choices: [
+        {
+          id: "gentle-next",
+          label: "See practical next steps",
+          targetNodeId: "next-steps",
+        },
+      ],
     },
     "hard-conclusion": {
       id: "hard-conclusion",
       title: "A demanding position",
       text: "Allowing preference-based harm is consistent, but it asks us to accept many harms we usually reject in other contexts.",
       type: "conclusion",
-      choices: [],
+      choices: [
+        {
+          id: "hard-next",
+          label: "Reflect on next steps",
+          targetNodeId: "next-steps",
+        },
+      ],
     },
     "open-question": {
       id: "open-question",
       title: "Open question",
       text: "If category membership matters most, the next step is explaining why that category should override comparable suffering.",
       type: "conclusion",
-      choices: [],
+      choices: [
+        {
+          id: "open-next",
+          label: "Choose what to do next",
+          targetNodeId: "next-steps",
+        },
+      ],
     },
     "future-input": {
       id: "future-input",
       title: "Input node placeholder",
       text: "Future versions will let viewers write a personal threshold here, then route the flow based on their answer.",
-      type: "input-placeholder",
+      type: "information",
       choices: [
         {
           id: "input-finish",
@@ -276,5 +294,30 @@ export const veganEthicsFlow: ThoughtFlowFlow = {
         },
       ],
     },
+    "next-steps": {
+      id: "next-steps",
+      title: "What would you like to do next?",
+      text: "If this resonated with you, here are a few low-pressure next steps to keep exploring.",
+      type: "action",
+      choices: [],
+      ctas: [
+        {
+          label: "Try Vegan for 7 Days",
+          url: "https://challenge22.com/",
+          style: "primary",
+        },
+        {
+          label: "Watch a Documentary",
+          url: "https://www.dominionmovement.com/watch",
+          style: "secondary",
+        },
+        {
+          label: "Read More",
+          url: "https://veganoutreach.org/why-vegan/",
+          style: "secondary",
+        },
+      ],
+    },
   },
 };
+

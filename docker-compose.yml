@@ -1,0 +1,14 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: thoughtflow
+      POSTGRES_USER: thoughtflow
+      POSTGRES_PASSWORD: thoughtflow
+    ports:
+      - "5432:5432"
+    volumes:
+      - thoughtflow-postgres:/var/lib/postgresql/data
+
+volumes:
+  thoughtflow-postgres:

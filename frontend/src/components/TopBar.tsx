@@ -1,4 +1,5 @@
-import { RotateCcw, Share2, Sparkles } from "lucide-react";
+import { useState } from "react";
+import { Check, RotateCcw, Share2, Sparkles } from "lucide-react";
 import type { ThoughtFlowFlow } from "../types/flow";
 
 type TopBarProps = {
@@ -7,6 +8,30 @@ type TopBarProps = {
 };
 
 export function TopBar({ flow, onReset }: TopBarProps) {
+  const [shareState, setShareState] = useState<"idle" | "copied" | "error">("idle");
+
+  async function shareFlow() {
+    const url = window.location.href;
+    setShareState("idle");
+
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: flow.title || "ThoughtFlow", url });
+      } else {
+        await navigator.clipboard.writeText(url);
+        setShareState("copied");
+        window.setTimeout(() => setShareState("idle"), 1800);
+      }
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") {
+        return;
+      }
+
+      setShareState("error");
+      window.setTimeout(() => setShareState("idle"), 1800);
+    }
+  }
+
   return (
     <header className="relative z-20 flex h-16 items-center justify-between border-b border-ink/10 bg-[#f9f6ed]/90 px-5 backdrop-blur">
       <div className="flex min-w-0 items-center gap-3">
@@ -24,10 +49,11 @@ export function TopBar({ flow, onReset }: TopBarProps) {
         <button
           className="icon-button"
           type="button"
-          title="Share preview"
-          aria-label="Share preview"
+          title={shareState === "copied" ? "Copied link" : "Share flow"}
+          aria-label={shareState === "copied" ? "Copied link" : "Share flow"}
+          onClick={() => void shareFlow()}
         >
-          <Share2 size={18} />
+          {shareState === "copied" ? <Check size={18} /> : <Share2 size={18} />}
         </button>
         <button
           className="icon-button"

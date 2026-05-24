@@ -33,6 +33,11 @@ button {
   border-radius: 6px;
 }
 
+.action-node {
+  @apply w-[430px] border bg-[#fffaf1] p-6 text-left shadow-active transition-colors duration-300;
+  border-radius: 8px;
+}
+
 .reasoning-node-current {
   @apply border-moss shadow-active;
 }
@@ -62,6 +67,18 @@ button {
 
 .choice-button-soft {
   @apply opacity-45;
+}
+
+.editor-label {
+  @apply mb-4 block text-xs font-extrabold uppercase tracking-[0.16em] text-moss;
+}
+
+.editor-input {
+  @apply mt-2 block w-full rounded-sm border border-ink/10 bg-white/70 px-3 py-2 text-sm font-bold normal-case tracking-normal text-ink outline-none transition focus:border-moss focus:bg-white;
+}
+
+.editor-small-button {
+  @apply inline-flex min-h-9 items-center gap-2 rounded-sm border border-ink/10 bg-white/60 px-3 py-2 text-xs font-extrabold uppercase tracking-[0.12em] text-ink transition hover:-translate-y-0.5 hover:border-moss/40 hover:bg-white hover:text-moss;
 }
 
 .flow-handle {

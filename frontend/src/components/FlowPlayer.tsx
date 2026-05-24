@@ -19,6 +19,11 @@ import { ReasoningNode, type ReasoningNodeData } from "./ReasoningNode";
 type FlowPlayerProps = {
   flow: ThoughtFlowFlow;
   player: FlowPlayerState;
+  isCompletionSaved?: boolean;
+  isSavingCompletion?: boolean;
+  onExploreAnotherPath?: () => void;
+  onRestart?: () => void;
+  onSubmitCompletion?: () => void;
 };
 
 const nodeTypes: NodeTypes = {
@@ -29,8 +34,17 @@ const edgeTypes: EdgeTypes = {
   animated: AnimatedEdge,
 };
 
-export function FlowPlayer({ flow, player }: FlowPlayerProps) {
+export function FlowPlayer({
+  flow,
+  isCompletionSaved = false,
+  isSavingCompletion = false,
+  onExploreAnotherPath = () => undefined,
+  onRestart,
+  onSubmitCompletion = () => undefined,
+  player,
+}: FlowPlayerProps) {
   const { setCenter, fitView } = useReactFlow();
+  const restart = onRestart ?? player.reset;
 
   const positionedNodes = useMemo(
     () => layoutVisibleNodes(flow, player.visibleNodeIds),
@@ -51,14 +65,26 @@ export function FlowPlayer({ flow, player }: FlowPlayerProps) {
             state: id === player.currentNodeId ? "current" : "visited",
             selectedChoiceId: player.selectedChoiceByNodeId[id],
             onChoose: player.choose,
+            onRestart: restart,
+            onExploreAnotherPath,
+            onSubmitCompletion,
+            canExploreAnotherPath: player.selectedChoices.length > 0,
+            isCompletionSaved,
+            isSavingCompletion,
           },
         };
       }),
     [
       flow.nodes,
+      isCompletionSaved,
+      isSavingCompletion,
+      onExploreAnotherPath,
+      onSubmitCompletion,
+      restart,
       player.choose,
       player.currentNodeId,
       player.selectedChoiceByNodeId,
+      player.selectedChoices.length,
       positionedNodes,
     ],
   );
@@ -97,7 +123,7 @@ export function FlowPlayer({ flow, player }: FlowPlayerProps) {
   }, [fitView]);
 
   return (
-    <section className="relative min-h-0 overflow-hidden border-r border-ink/10 max-[980px]:h-[68vh] max-[980px]:border-r-0">
+    <section className="relative h-full min-h-0 overflow-hidden border-r border-ink/10 max-[980px]:h-[68vh] max-[980px]:border-r-0">
       <div className="pointer-events-none absolute left-6 top-6 z-10 max-w-sm">
         <p className="rounded-sm border border-ink/10 bg-[#f9f6ed]/80 px-3 py-2 text-xs font-bold uppercase tracking-[0.18em] text-moss shadow-sm backdrop-blur">
           Play the path, one decision at a time

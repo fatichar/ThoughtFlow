@@ -1,5 +1,6 @@
 export type ThoughtFlowFlow = {
   id: string;
+  slug?: string;
   title: string;
   description?: string;
   tags?: string[];
@@ -9,10 +10,9 @@ export type ThoughtFlowFlow = {
 
 export type ThoughtFlowNodeType =
   | "question"
-  | "claim"
-  | "reflection"
-  | "input-placeholder"
-  | "conclusion";
+  | "information"
+  | "conclusion"
+  | "action";
 
 export type ThoughtFlowNode = {
   id: string;
@@ -20,12 +20,19 @@ export type ThoughtFlowNode = {
   text: string;
   type: ThoughtFlowNodeType;
   choices: ThoughtFlowChoice[];
+  ctas?: ThoughtFlowCta[];
 };
 
 export type ThoughtFlowChoice = {
   id: string;
   label: string;
   targetNodeId: string;
+};
+
+export type ThoughtFlowCta = {
+  label: string;
+  url: string;
+  style: "primary" | "secondary";
 };
 
 export type SelectedChoice = {

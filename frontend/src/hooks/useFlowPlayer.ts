@@ -1,5 +1,9 @@
-import { useCallback, useMemo, useState } from "react";
-import type { ThoughtFlowChoice, ThoughtFlowFlow, SelectedChoice } from "../types/flow";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import type {
+  SelectedChoice,
+  ThoughtFlowChoice,
+  ThoughtFlowFlow,
+} from "../types/flow";
 
 export type FlowPlayerState = {
   currentNodeId: string;
@@ -22,13 +26,32 @@ export function useFlowPlayer(flow: ThoughtFlowFlow): FlowPlayerState {
   const [activeEdgeId, setActiveEdgeId] = useState<string | null>(null);
   const [pathVersion, setPathVersion] = useState(0);
 
+  const safeCurrentNodeId = flow.nodes[currentNodeId]
+    ? currentNodeId
+    : flow.startNodeId;
+  const safeVisibleNodeIds = useMemo(() => {
+    const existingNodeIds = visibleNodeIds.filter((nodeId) => flow.nodes[nodeId]);
+
+    return existingNodeIds.length > 0 && existingNodeIds[0] === flow.startNodeId
+      ? existingNodeIds
+      : [flow.startNodeId];
+  }, [flow.nodes, flow.startNodeId, visibleNodeIds]);
+  const safeSelectedChoices = useMemo(
+    () =>
+      selectedChoices.filter(
+        (choice) =>
+          flow.nodes[choice.fromNodeId] && flow.nodes[choice.targetNodeId],
+      ),
+    [flow.nodes, selectedChoices],
+  );
+
   const selectedChoiceByNodeId = useMemo(
     () =>
-      selectedChoices.reduce<Record<string, string>>((acc, choice) => {
+      safeSelectedChoices.reduce<Record<string, string>>((acc, choice) => {
         acc[choice.fromNodeId] = choice.choiceId;
         return acc;
       }, {}),
-    [selectedChoices],
+    [safeSelectedChoices],
   );
 
   const choose = useCallback(
@@ -73,10 +96,14 @@ export function useFlowPlayer(flow: ThoughtFlowFlow): FlowPlayerState {
     setPathVersion((version) => version + 1);
   }, [flow.startNodeId]);
 
+  useEffect(() => {
+    reset();
+  }, [flow.id, reset]);
+
   return {
-    currentNodeId,
-    visibleNodeIds,
-    selectedChoices,
+    currentNodeId: safeCurrentNodeId,
+    visibleNodeIds: safeVisibleNodeIds,
+    selectedChoices: safeSelectedChoices,
     activeEdgeId,
     pathVersion,
     selectedChoiceByNodeId,
