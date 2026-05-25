@@ -84,8 +84,11 @@ jobs:
           VPS_PORT: ${{ vars.VPS_PORT }}
           VPS_USER: ${{ vars.VPS_USER }}
         run: |
-          ssh ${SSH_OPTIONS} -p "${VPS_PORT}" "${VPS_USER}@${VPS_HOST}" "mkdir -p /opt/thoughtflow"
-          scp ${SSH_OPTIONS} -P "${VPS_PORT}" docker-compose.production.yml "${VPS_USER}@${VPS_HOST}:/opt/thoughtflow/docker-compose.yml"
+          scp ${SSH_OPTIONS} -P "${VPS_PORT}" docker-compose.production.yml "${VPS_USER}@${VPS_HOST}:/tmp/thoughtflow-docker-compose.yml"
+          ssh ${SSH_OPTIONS} -p "${VPS_PORT}" "${VPS_USER}@${VPS_HOST}" "\
+            sudo mkdir -p /opt/thoughtflow && \
+            sudo mv /tmp/thoughtflow-docker-compose.yml /opt/thoughtflow/docker-compose.yml && \
+            sudo chown ${VPS_USER}:${VPS_USER} /opt/thoughtflow/docker-compose.yml"
 
       - name: Ensure /opt/thoughtflow/.env exists on VPS
         env:
@@ -101,7 +104,8 @@ jobs:
           ENV_FILE="${APP_DIR}/.env"
           DINZER_ENV=/opt/dinzer/.env
 
-          mkdir -p "${APP_DIR}"
+          sudo mkdir -p "${APP_DIR}"
+          sudo chown "${USER}:${USER}" "${APP_DIR}"
           touch "${ENV_FILE}"
 
           get_env() {
