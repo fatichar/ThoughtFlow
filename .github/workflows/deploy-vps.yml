@@ -76,7 +76,7 @@ jobs:
           chmod 600 ~/.ssh/id_rsa
           printf "Host *\n\tStrictHostKeyChecking no\n" > ~/.ssh/config
           chmod 600 ~/.ssh/config
-          echo 'SSH_OPTIONS=-i ~/.ssh/id_rsa -o StrictHostKeyChecking=no -o ConnectTimeout=30 -o ServerAliveInterval=30 -o ServerAliveCountMax=6' >> "$GITHUB_ENV"
+          echo 'SSH_OPTIONS=-i ~/.ssh/id_rsa -o StrictHostKeyChecking=no -o ConnectTimeout=45 -o ServerAliveInterval=30 -o ServerAliveCountMax=6' >> "$GITHUB_ENV"
 
       - name: Copy compose file to VPS
         env:
@@ -84,8 +84,25 @@ jobs:
           VPS_PORT: ${{ vars.VPS_PORT }}
           VPS_USER: ${{ vars.VPS_USER }}
         run: |
-          ssh ${SSH_OPTIONS} -p "${VPS_PORT}" "${VPS_USER}@${VPS_HOST}" "mkdir -p /opt/thoughtflow"
-          scp ${SSH_OPTIONS} -P "${VPS_PORT}" docker-compose.production.yml "${VPS_USER}@${VPS_HOST}:/opt/thoughtflow/docker-compose.yml"
+          retry() {
+            local attempt=1
+            local max_attempts=4
+            local delay=15
+
+            until "$@"; do
+              if [ "$attempt" -ge "$max_attempts" ]; then
+                return 1
+              fi
+
+              echo "Attempt ${attempt} failed. Retrying in ${delay}s..."
+              sleep "$delay"
+              attempt=$((attempt + 1))
+              delay=$((delay * 2))
+            done
+          }
+
+          retry ssh ${SSH_OPTIONS} -p "${VPS_PORT}" "${VPS_USER}@${VPS_HOST}" "mkdir -p /opt/thoughtflow"
+          retry scp ${SSH_OPTIONS} -P "${VPS_PORT}" docker-compose.production.yml "${VPS_USER}@${VPS_HOST}:/opt/thoughtflow/docker-compose.yml"
 
       - name: Ensure /opt/thoughtflow/.env exists on VPS
         env:
@@ -94,7 +111,24 @@ jobs:
           VPS_USER: ${{ vars.VPS_USER }}
           GITHUB_OWNER: ${{ env.GITHUB_OWNER }}
         run: |
-          ssh ${SSH_OPTIONS} -p "${VPS_PORT}" "${VPS_USER}@${VPS_HOST}" "GITHUB_OWNER='${GITHUB_OWNER}' bash -s" <<'REMOTE'
+          retry() {
+            local attempt=1
+            local max_attempts=4
+            local delay=15
+
+            until "$@"; do
+              if [ "$attempt" -ge "$max_attempts" ]; then
+                return 1
+              fi
+
+              echo "Attempt ${attempt} failed. Retrying in ${delay}s..."
+              sleep "$delay"
+              attempt=$((attempt + 1))
+              delay=$((delay * 2))
+            done
+          }
+
+          retry ssh ${SSH_OPTIONS} -p "${VPS_PORT}" "${VPS_USER}@${VPS_HOST}" "GITHUB_OWNER='${GITHUB_OWNER}' bash -s" <<'REMOTE'
           set -euo pipefail
 
           APP_DIR=/opt/thoughtflow
@@ -154,7 +188,24 @@ jobs:
           VPS_PORT: ${{ vars.VPS_PORT }}
           VPS_USER: ${{ vars.VPS_USER }}
         run: |
-          ssh ${SSH_OPTIONS} -p "${VPS_PORT}" "${VPS_USER}@${VPS_HOST}" "\
+          retry() {
+            local attempt=1
+            local max_attempts=4
+            local delay=15
+
+            until "$@"; do
+              if [ "$attempt" -ge "$max_attempts" ]; then
+                return 1
+              fi
+
+              echo "Attempt ${attempt} failed. Retrying in ${delay}s..."
+              sleep "$delay"
+              attempt=$((attempt + 1))
+              delay=$((delay * 2))
+            done
+          }
+
+          retry ssh ${SSH_OPTIONS} -p "${VPS_PORT}" "${VPS_USER}@${VPS_HOST}" "\
             cd /opt/thoughtflow && \
             docker compose pull && \
             docker compose up -d"
