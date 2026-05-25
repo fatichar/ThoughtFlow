@@ -1,0 +1,73 @@
+services:
+  db-init:
+    image: postgres:18
+    restart: "no"
+    networks:
+      - postgres
+    environment:
+      PGHOST: ${POSTGRES_HOST:-postgres}
+      PGPORT: ${POSTGRES_PORT:-5432}
+      PGUSER: ${POSTGRES_ADMIN_USER}
+      PGPASSWORD: ${POSTGRES_ADMIN_PASSWORD}
+      APP_DB: ${POSTGRES_DB:-thoughtflow}
+      APP_USER: ${POSTGRES_USER:-thoughtflow}
+      APP_PASSWORD: ${POSTGRES_PASSWORD}
+    command:
+      - sh
+      - -c
+      - |
+        set -eu
+        until pg_isready -h "$$PGHOST" -p "$$PGPORT" -U "$$PGUSER"; do
+          sleep 2
+        done
+        psql -v ON_ERROR_STOP=1 -d postgres \
+          -v app_db="$$APP_DB" \
+          -v app_user="$$APP_USER" \
+          -v app_password="$$APP_PASSWORD" <<'SQL'
+        SELECT 'CREATE DATABASE ' || quote_ident(:'app_db')
+        WHERE NOT EXISTS (SELECT 1 FROM pg_database WHERE datname = :'app_db')\gexec
+
+        SELECT format('CREATE USER %I WITH PASSWORD %L', :'app_user', :'app_password')
+        WHERE NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = :'app_user')\gexec
+
+        SELECT format('ALTER USER %I WITH PASSWORD %L', :'app_user', :'app_password')
+        WHERE EXISTS (SELECT 1 FROM pg_roles WHERE rolname = :'app_user')\gexec
+
+        SELECT format('GRANT ALL PRIVILEGES ON DATABASE %I TO %I', :'app_db', :'app_user')\gexec
+        SQL
+        psql -v ON_ERROR_STOP=1 -d "$$APP_DB" \
+          -v app_user="$$APP_USER" <<'SQL'
+        SELECT format('GRANT USAGE, CREATE ON SCHEMA public TO %I', :'app_user')\gexec
+        SQL
+
+  api:
+    image: ghcr.io/${GITHUB_OWNER}/thoughtflow-api:latest
+    restart: unless-stopped
+    depends_on:
+      db-init:
+        condition: service_completed_successfully
+    networks:
+      - app
+      - postgres
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_FORWARDEDHEADERS_ENABLED: "true"
+      ConnectionStrings__DefaultConnection: Host=${POSTGRES_HOST:-postgres};Port=${POSTGRES_PORT:-5432};Database=${POSTGRES_DB:-thoughtflow};Username=${POSTGRES_USER:-thoughtflow};Password=${POSTGRES_PASSWORD}
+      Cors__AllowedOrigins__0: ${CORS_ALLOWED_ORIGIN}
+      Database__EnsureCreated: ${DATABASE_ENSURE_CREATED:-true}
+
+  web:
+    image: ghcr.io/${GITHUB_OWNER}/thoughtflow-web:latest
+    restart: unless-stopped
+    depends_on:
+      - api
+    networks:
+      - app
+    ports:
+      - "127.0.0.1:${WEB_PORT:-10000}:8080"
+
+networks:
+  app:
+  postgres:
+    external: true
+    name: ${POSTGRES_DOCKER_NETWORK:-dinzer_default}

@@ -1,0 +1,160 @@
+name: Build and Deploy to VPS
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    environment: Prod
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set image names
+        run: |
+          OWNER_LC="$(printf '%s' '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')"
+          echo "GITHUB_OWNER=${OWNER_LC}" >> "$GITHUB_ENV"
+          echo "IMAGE_API=ghcr.io/${OWNER_LC}/thoughtflow-api" >> "$GITHUB_ENV"
+          echo "IMAGE_WEB=ghcr.io/${OWNER_LC}/thoughtflow-web" >> "$GITHUB_ENV"
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract Docker metadata for API
+        id: meta_api
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_API }}
+          tags: |
+            type=raw,value=latest
+            type=sha
+
+      - name: Extract Docker metadata for Web
+        id: meta_web
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_WEB }}
+          tags: |
+            type=raw,value=latest
+            type=sha
+
+      - name: Build and push API image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          push: true
+          tags: ${{ steps.meta_api.outputs.tags }}
+          labels: ${{ steps.meta_api.outputs.labels }}
+
+      - name: Build and push Web image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile
+          push: true
+          tags: ${{ steps.meta_web.outputs.tags }}
+          labels: ${{ steps.meta_web.outputs.labels }}
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.VPS_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          printf "Host *\n\tStrictHostKeyChecking no\n" > ~/.ssh/config
+          chmod 600 ~/.ssh/config
+          echo 'SSH_OPTIONS=-i ~/.ssh/id_rsa -o StrictHostKeyChecking=no -o ConnectTimeout=30 -o ServerAliveInterval=30 -o ServerAliveCountMax=6' >> "$GITHUB_ENV"
+
+      - name: Copy compose file to VPS
+        env:
+          VPS_HOST: ${{ vars.VPS_HOST }}
+          VPS_PORT: ${{ vars.VPS_PORT }}
+          VPS_USER: ${{ vars.VPS_USER }}
+        run: |
+          ssh ${SSH_OPTIONS} -p "${VPS_PORT}" "${VPS_USER}@${VPS_HOST}" "mkdir -p /opt/thoughtflow"
+          scp ${SSH_OPTIONS} -P "${VPS_PORT}" docker-compose.production.yml "${VPS_USER}@${VPS_HOST}:/opt/thoughtflow/docker-compose.yml"
+
+      - name: Ensure /opt/thoughtflow/.env exists on VPS
+        env:
+          VPS_HOST: ${{ vars.VPS_HOST }}
+          VPS_PORT: ${{ vars.VPS_PORT }}
+          VPS_USER: ${{ vars.VPS_USER }}
+          GITHUB_OWNER: ${{ env.GITHUB_OWNER }}
+        run: |
+          ssh ${SSH_OPTIONS} -p "${VPS_PORT}" "${VPS_USER}@${VPS_HOST}" "GITHUB_OWNER='${GITHUB_OWNER}' bash -s" <<'REMOTE'
+          set -euo pipefail
+
+          APP_DIR=/opt/thoughtflow
+          ENV_FILE="${APP_DIR}/.env"
+          DINZER_ENV=/opt/dinzer/.env
+
+          mkdir -p "${APP_DIR}"
+          touch "${ENV_FILE}"
+
+          get_env() {
+            local file="$1"
+            local key="$2"
+            if [ -f "$file" ]; then
+              grep -E "^${key}=" "$file" | tail -n 1 | cut -d= -f2- || true
+            fi
+          }
+
+          ensure_env() {
+            local key="$1"
+            local value="$2"
+            if ! grep -qE "^${key}=" "${ENV_FILE}"; then
+              printf '%s=%s\n' "$key" "$value" >> "${ENV_FILE}"
+            fi
+          }
+
+          set_env() {
+            local key="$1"
+            local value="$2"
+            if grep -qE "^${key}=" "${ENV_FILE}"; then
+              sed -i "s|^${key}=.*|${key}=${value}|" "${ENV_FILE}"
+            else
+              printf '%s=%s\n' "$key" "$value" >> "${ENV_FILE}"
+            fi
+          }
+
+          dinzer_pg_user="$(get_env "${DINZER_ENV}" POSTGRES_USER)"
+          dinzer_pg_password="$(get_env "${DINZER_ENV}" POSTGRES_PASSWORD)"
+          app_password="$(openssl rand -hex 24)"
+
+          set_env GITHUB_OWNER "${GITHUB_OWNER}"
+          ensure_env POSTGRES_DOCKER_NETWORK "dinzer_default"
+          ensure_env POSTGRES_HOST "postgres"
+          ensure_env POSTGRES_PORT "5432"
+          ensure_env POSTGRES_DB "thoughtflow"
+          ensure_env POSTGRES_USER "thoughtflow"
+          ensure_env POSTGRES_PASSWORD "${app_password}"
+          ensure_env POSTGRES_ADMIN_USER "${dinzer_pg_user:-postgres}"
+          ensure_env POSTGRES_ADMIN_PASSWORD "${dinzer_pg_password:-change-me}"
+          ensure_env CORS_ALLOWED_ORIGIN "https://thoughtflow.example.com"
+          ensure_env WEB_PORT "10000"
+          ensure_env DATABASE_ENSURE_CREATED "true"
+          REMOTE
+
+      - name: Deploy on VPS
+        env:
+          VPS_HOST: ${{ vars.VPS_HOST }}
+          VPS_PORT: ${{ vars.VPS_PORT }}
+          VPS_USER: ${{ vars.VPS_USER }}
+        run: |
+          ssh ${SSH_OPTIONS} -p "${VPS_PORT}" "${VPS_USER}@${VPS_HOST}" "\
+            cd /opt/thoughtflow && \
+            docker compose pull && \
+            docker compose up -d"
