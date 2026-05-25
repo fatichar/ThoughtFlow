@@ -11,7 +11,12 @@ import {
   Trash2,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { fetchPublishedFlow, savePublishedFlow } from "../api/flows";
+import {
+  fetchPublishedFlow,
+  listFlows,
+  savePublishedFlow,
+  type FlowSummary,
+} from "../api/flows";
 import { veganEthicsFlow } from "../data/veganEthicsFlow";
 import { useFlowPlayer } from "../hooks/useFlowPlayer";
 import type {
@@ -22,6 +27,7 @@ import type {
   ThoughtFlowNodeType,
 } from "../types/flow";
 import { FlowPlayer } from "./FlowPlayer";
+import { FlowLibrary } from "./FlowLibrary";
 
 type ValidationIssue = {
   id: string;
@@ -60,6 +66,8 @@ export function FlowEditor() {
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">(
     "idle",
   );
+  const [flowSummaries, setFlowSummaries] = useState<FlowSummary[]>([]);
+  const [listState, setListState] = useState<"idle" | "loading" | "error">("idle");
   const [isCompactPreview, setIsCompactPreview] = useState(
     () => window.innerWidth <= 1180,
   );
@@ -85,6 +93,30 @@ export function FlowEditor() {
 
     return () => mediaQuery.removeEventListener("change", syncPreviewLayout);
   }, []);
+
+  useEffect(() => {
+    if (editorSlug) {
+      return;
+    }
+
+    const controller = new AbortController();
+    setListState("loading");
+
+    listFlows(controller.signal)
+      .then((summaries) => {
+        setFlowSummaries(summaries);
+        setListState("idle");
+      })
+      .catch((error) => {
+        if (error instanceof DOMException && error.name === "AbortError") {
+          return;
+        }
+
+        setListState("error");
+      });
+
+    return () => controller.abort();
+  }, [editorSlug]);
 
   useEffect(() => {
     if (!editorSlug || editorSlug === "is-taste-enough") {
@@ -276,6 +308,17 @@ export function FlowEditor() {
     }
   }
 
+  if (!editorSlug) {
+    return (
+      <FlowLibrary
+        flowSummaries={flowSummaries}
+        listState={listState}
+        mode="edit"
+        onCreateFlow={createFlow}
+      />
+    );
+  }
+
   return (
     <div className="grid h-screen grid-cols-[320px_minmax(420px,540px)_minmax(0,1fr)] overflow-hidden bg-canvas text-ink max-[1180px]:grid-cols-[300px_1fr]">
       <aside className="min-h-0 overflow-y-auto border-r border-ink/10 bg-[#fbf8f0] px-4 py-4">
@@ -402,6 +445,7 @@ export function FlowEditor() {
     </div>
   );
 }
+
 
 function PreviewHeader({ previewStartNodeId }: { previewStartNodeId: string }) {
   return (

@@ -1,4 +1,4 @@
-import { memo } from "react";
+import { memo, useState } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
 import { motion } from "framer-motion";
 import {
@@ -8,6 +8,7 @@ import {
   CornerDownRight,
   RotateCcw,
   Send,
+  Share2,
   Sparkles,
 } from "lucide-react";
 import type { ThoughtFlowChoice, ThoughtFlowNode } from "../types/flow";
@@ -19,6 +20,7 @@ export type ReasoningNodeData = {
   onChoose: (fromNodeId: string, choice: ThoughtFlowChoice) => void;
   onRestart: () => void;
   onExploreAnotherPath: () => void;
+  onShareFlow: () => Promise<"shared" | "copied" | "cancelled">;
   onSubmitCompletion: () => void;
   canExploreAnotherPath: boolean;
   isCompletionSaved: boolean;
@@ -49,6 +51,7 @@ function ReasoningNodeComponent({ data }: NodeProps) {
     onChoose,
     onExploreAnotherPath,
     onRestart,
+    onShareFlow,
     onSubmitCompletion,
     selectedChoiceId,
     state,
@@ -58,6 +61,22 @@ function ReasoningNodeComponent({ data }: NodeProps) {
   const isAction = node.type === "action";
   const validCtas = node.ctas?.filter((cta) => cta.label.trim() && cta.url.trim()) ?? [];
   const isTerminalNode = isAction ? validCtas.length === 0 : node.choices.length === 0;
+  const [shareState, setShareState] = useState<"idle" | "copied" | "error">("idle");
+
+  async function handleShareCta() {
+    setShareState("idle");
+
+    try {
+      const result = await onShareFlow();
+      if (result === "copied") {
+        setShareState("copied");
+        window.setTimeout(() => setShareState("idle"), 1800);
+      }
+    } catch {
+      setShareState("error");
+      window.setTimeout(() => setShareState("idle"), 1800);
+    }
+  }
 
   return (
     <motion.article
@@ -105,23 +124,48 @@ function ReasoningNodeComponent({ data }: NodeProps) {
             What would you like to do next?
           </p>
           <div className="grid gap-2">
-            {validCtas.map((cta) => (
-              <a
-                className={[
-                  "flex min-h-12 items-center justify-between gap-3 rounded-sm border px-4 py-3 text-sm font-extrabold transition hover:-translate-y-0.5",
-                  cta.style === "primary"
-                    ? "border-ink bg-ink text-canvas hover:bg-moss"
-                    : "border-ink/10 bg-white/55 text-ink hover:border-moss/45 hover:text-moss",
-                ].join(" ")}
-                href={cta.url}
-                key={`${cta.label}-${cta.url}`}
-                rel="noreferrer"
-                target="_blank"
-              >
-                <span>{cta.label}</span>
-                <ArrowUpRight size={17} />
-              </a>
-            ))}
+            {validCtas.map((cta) => {
+              const isShareCta = cta.label.toLowerCase().includes("share");
+              const className = [
+                "flex min-h-12 items-center justify-between gap-3 rounded-sm border px-4 py-3 text-sm font-extrabold transition hover:-translate-y-0.5",
+                cta.style === "primary"
+                  ? "border-ink bg-ink text-canvas hover:bg-moss"
+                  : "border-ink/10 bg-white/55 text-ink hover:border-moss/45 hover:text-moss",
+              ].join(" ");
+
+              if (isShareCta) {
+                return (
+                  <button
+                    className={className}
+                    key={`${cta.label}-${cta.url}`}
+                    onClick={() => void handleShareCta()}
+                    type="button"
+                  >
+                    <span>
+                      {shareState === "copied"
+                        ? "Copied link"
+                        : shareState === "error"
+                          ? "Could not share"
+                          : cta.label}
+                    </span>
+                    <Share2 size={17} />
+                  </button>
+                );
+              }
+
+              return (
+                <a
+                  className={className}
+                  href={cta.url}
+                  key={`${cta.label}-${cta.url}`}
+                  rel="noreferrer"
+                  target="_blank"
+                >
+                  <span>{cta.label}</span>
+                  <ArrowUpRight size={17} />
+                </a>
+              );
+            })}
           </div>
           {validCtas.length === 0 ? (
             <button

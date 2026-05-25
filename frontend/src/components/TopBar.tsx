@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Check, RotateCcw, Share2, Sparkles } from "lucide-react";
 import type { ThoughtFlowFlow } from "../types/flow";
+import { shareFlowUrl } from "../utils/shareFlow";
 
 type TopBarProps = {
   flow: ThoughtFlowFlow;
@@ -15,10 +16,8 @@ export function TopBar({ flow, onReset }: TopBarProps) {
     setShareState("idle");
 
     try {
-      if (navigator.share) {
-        await navigator.share({ title: flow.title || "ThoughtFlow", url });
-      } else {
-        await navigator.clipboard.writeText(url);
+      const result = await shareFlowUrl(flow.title || "ThoughtFlow", url);
+      if (result === "copied") {
         setShareState("copied");
         window.setTimeout(() => setShareState("idle"), 1800);
       }

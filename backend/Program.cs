@@ -46,6 +46,26 @@ app.MapGet("/api/health", () => Results.Ok(new
     timestamp = DateTimeOffset.UtcNow,
 }));
 
+app.MapGet("/api/flows", async (
+    ThoughtFlowDbContext dbContext,
+    CancellationToken cancellationToken) =>
+{
+    var flows = await dbContext.Flows
+        .AsNoTracking()
+        .OrderByDescending(flow => flow.UpdatedAt)
+        .Select(flow => new FlowSummaryResponse(
+            flow.Id,
+            flow.Slug,
+            flow.Title,
+            flow.Description,
+            flow.IsPublished,
+            flow.CreatedAt,
+            flow.UpdatedAt))
+        .ToListAsync(cancellationToken);
+
+    return Results.Ok(flows);
+});
+
 app.MapGet("/api/flows/{slug}", async (
     string slug,
     ThoughtFlowDbContext dbContext,

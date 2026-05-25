@@ -23,6 +23,7 @@ type FlowPlayerProps = {
   isSavingCompletion?: boolean;
   onExploreAnotherPath?: () => void;
   onRestart?: () => void;
+  onShareFlow?: () => Promise<"shared" | "copied" | "cancelled">;
   onSubmitCompletion?: () => void;
 };
 
@@ -40,6 +41,7 @@ export function FlowPlayer({
   isSavingCompletion = false,
   onExploreAnotherPath = () => undefined,
   onRestart,
+  onShareFlow = async () => "cancelled",
   onSubmitCompletion = () => undefined,
   player,
 }: FlowPlayerProps) {
@@ -67,6 +69,7 @@ export function FlowPlayer({
             onChoose: player.choose,
             onRestart: restart,
             onExploreAnotherPath,
+            onShareFlow,
             onSubmitCompletion,
             canExploreAnotherPath: player.selectedChoices.length > 0,
             isCompletionSaved,
@@ -81,6 +84,7 @@ export function FlowPlayer({
       onExploreAnotherPath,
       onSubmitCompletion,
       restart,
+      onShareFlow,
       player.choose,
       player.currentNodeId,
       player.selectedChoiceByNodeId,

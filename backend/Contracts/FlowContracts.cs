@@ -9,6 +9,15 @@ public sealed record PublishedFlowResponse(
     string? Description,
     JsonElement Flow);
 
+public sealed record FlowSummaryResponse(
+    Guid Id,
+    string Slug,
+    string Title,
+    string? Description,
+    bool IsPublished,
+    DateTimeOffset CreatedAt,
+    DateTimeOffset UpdatedAt);
+
 public sealed record SaveFlowRequest(
     string Title,
     string? Description,

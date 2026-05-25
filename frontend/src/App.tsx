@@ -2,14 +2,18 @@ import { ReactFlowProvider } from "@xyflow/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   fetchPublishedFlow,
+  listFlows,
   submitFlowResult,
+  type FlowSummary,
   type PublishedFlow,
 } from "./api/flows";
 import { FlowEditor } from "./components/FlowEditor";
+import { FlowLibrary } from "./components/FlowLibrary";
 import { FlowPlayer } from "./components/FlowPlayer";
 import { FlowSidebar } from "./components/FlowSidebar";
 import { TopBar } from "./components/TopBar";
 import { useFlowPlayer } from "./hooks/useFlowPlayer";
+import { shareFlowUrl } from "./utils/shareFlow";
 
 const fallbackSlug = "is-taste-enough";
 
@@ -18,7 +22,44 @@ export default function App() {
     return <FlowEditor />;
   }
 
+  if (window.location.pathname === "/" || window.location.pathname === "/flows") {
+    return <FlowDirectory />;
+  }
+
   return <PlayerApp />;
+}
+
+function FlowDirectory() {
+  const [flowSummaries, setFlowSummaries] = useState<FlowSummary[]>([]);
+  const [listState, setListState] = useState<"idle" | "loading" | "error">("loading");
+
+  useEffect(() => {
+    const controller = new AbortController();
+    setListState("loading");
+
+    listFlows(controller.signal)
+      .then((summaries) => {
+        setFlowSummaries(summaries.filter((summary) => summary.isPublished));
+        setListState("idle");
+      })
+      .catch((error) => {
+        if (error instanceof DOMException && error.name === "AbortError") {
+          return;
+        }
+
+        setListState("error");
+      });
+
+    return () => controller.abort();
+  }, []);
+
+  return (
+    <FlowLibrary
+      flowSummaries={flowSummaries}
+      listState={listState}
+      mode="play"
+    />
+  );
 }
 
 function PlayerApp() {
@@ -182,6 +223,12 @@ function PlayableFlow({
             isCompletionSaved={isSubmitted}
             isSavingCompletion={isSubmitting}
             onExploreAnotherPath={handleExploreAnotherPath}
+            onShareFlow={() =>
+              shareFlowUrl(
+                publishedFlow.flow.title || publishedFlow.title,
+                `${window.location.origin}/play/${publishedFlow.slug}`,
+              )
+            }
             onSubmitCompletion={() => {
               if (isTerminalNode) {
                 void handleSubmit();

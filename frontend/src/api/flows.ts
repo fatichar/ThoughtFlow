@@ -8,6 +8,16 @@ export type PublishedFlow = {
   flow: ThoughtFlowFlow;
 };
 
+export type FlowSummary = {
+  id: string;
+  slug: string;
+  title: string;
+  description?: string;
+  isPublished: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type SubmitFlowResultInput = {
   path: SelectedChoice[];
   finalNodeId: string;
@@ -31,6 +41,19 @@ export async function fetchPublishedFlow(slug: string, signal?: AbortSignal) {
   }
 
   return (await response.json()) as PublishedFlow;
+}
+
+export async function listFlows(signal?: AbortSignal) {
+  const response = await fetch("/api/flows", {
+    signal,
+    headers: { Accept: "application/json" },
+  });
+
+  if (!response.ok) {
+    throw new Error("Could not load flows");
+  }
+
+  return (await response.json()) as FlowSummary[];
 }
 
 export async function savePublishedFlow(input: SavePublishedFlowInput) {
