@@ -1,5 +1,6 @@
 import { Edit3, FilePlus2, Play } from "lucide-react";
 import type { FlowSummary } from "../api/flows";
+import { siteName } from "../config/site";
 
 type FlowLibraryProps = {
   flowSummaries: FlowSummary[];
@@ -22,7 +23,7 @@ export function FlowLibrary({
         <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
           <div>
             <p className="font-display text-4xl leading-10">
-              {isEditMode ? "Flow editor" : "Being Ethical"}
+              {isEditMode ? "Flow editor" : siteName}
             </p>
             <p className="mt-2 text-sm font-semibold leading-6 text-ink/60">
               {isEditMode

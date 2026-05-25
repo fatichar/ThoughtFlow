@@ -12,12 +12,17 @@ import { FlowLibrary } from "./components/FlowLibrary";
 import { FlowPlayer } from "./components/FlowPlayer";
 import { FlowSidebar } from "./components/FlowSidebar";
 import { TopBar } from "./components/TopBar";
+import { siteName } from "./config/site";
 import { useFlowPlayer } from "./hooks/useFlowPlayer";
 import { shareFlowUrl } from "./utils/shareFlow";
 
 const fallbackSlug = "is-taste-enough";
 
 export default function App() {
+  useEffect(() => {
+    document.title = siteName;
+  }, []);
+
   if (window.location.pathname.startsWith("/editor")) {
     return <FlowEditor />;
   }

@@ -1,6 +1,9 @@
 FROM node:24-alpine AS build
 WORKDIR /app
 
+ARG VITE_SITE_NAME=ThoughtFlow
+ENV VITE_SITE_NAME=$VITE_SITE_NAME
+
 COPY package*.json ./
 RUN npm ci
 

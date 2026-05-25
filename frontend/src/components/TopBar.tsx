@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Check, RotateCcw, Share2, Sparkles } from "lucide-react";
+import { siteName } from "../config/site";
 import type { ThoughtFlowFlow } from "../types/flow";
 import { shareFlowUrl } from "../utils/shareFlow";
 
@@ -16,7 +17,7 @@ export function TopBar({ flow, onReset }: TopBarProps) {
     setShareState("idle");
 
     try {
-      const result = await shareFlowUrl(flow.title || "ThoughtFlow", url);
+      const result = await shareFlowUrl(flow.title || siteName, url);
       if (result === "copied") {
         setShareState("copied");
         window.setTimeout(() => setShareState("idle"), 1800);
@@ -38,7 +39,7 @@ export function TopBar({ flow, onReset }: TopBarProps) {
           <Sparkles size={19} strokeWidth={2.2} />
         </div>
         <div className="min-w-0">
-          <p className="font-display text-xl leading-5">ThoughtFlow</p>
+          <p className="font-display text-xl leading-5">{siteName}</p>
           <p className="truncate text-xs font-semibold uppercase tracking-[0.18em] text-moss">
             {flow.title}
           </p>

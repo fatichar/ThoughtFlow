@@ -1,9 +1,11 @@
+import { siteName } from "../config/site";
+
 export type ShareResult = "shared" | "copied" | "cancelled";
 
 export async function shareFlowUrl(title: string, url = window.location.href) {
   if (navigator.share) {
     try {
-      await navigator.share({ title: title || "ThoughtFlow", url });
+      await navigator.share({ title: title || siteName, url });
       return "shared" satisfies ShareResult;
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") {
