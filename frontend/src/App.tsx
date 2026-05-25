@@ -196,15 +196,6 @@ function PlayableFlow({
     player.currentNodeId,
   ]);
 
-  function handleExploreAnotherPath() {
-    const previousChoice = player.selectedChoices.at(-2) ?? player.selectedChoices.at(-1);
-    if (previousChoice) {
-      submittedActionNodeRef.current = null;
-      onResetCompletion();
-      player.focusNode(previousChoice.fromNodeId);
-    }
-  }
-
   return (
     <div className="h-screen overflow-hidden bg-canvas text-ink">
       <ReactFlowProvider>
@@ -222,7 +213,6 @@ function PlayableFlow({
             flow={publishedFlow.flow}
             isCompletionSaved={isSubmitted}
             isSavingCompletion={isSubmitting}
-            onExploreAnotherPath={handleExploreAnotherPath}
             onShareFlow={() =>
               shareFlowUrl(
                 publishedFlow.flow.title || publishedFlow.title,
