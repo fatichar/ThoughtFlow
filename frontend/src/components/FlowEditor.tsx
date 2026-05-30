@@ -503,6 +503,8 @@ function OutlineNode({
         <button
           className="grid h-6 w-6 place-items-center text-ink/60"
           type="button"
+          title={isExpanded ? "Collapse children" : "Expand children"}
+          aria-label={isExpanded ? "Collapse children" : "Expand children"}
           onClick={() => onToggle(nodeId)}
         >
           <ListTree size={14} />
@@ -611,13 +613,31 @@ function NodeEditorForm({
           </p>
         </div>
         <div className="flex gap-2">
-          <button className="icon-button" type="button" onClick={() => onPlayFromHere(node.id)}>
+          <button
+            className="icon-button"
+            type="button"
+            title="Play from here"
+            aria-label="Play from here"
+            onClick={() => onPlayFromHere(node.id)}
+          >
             <Play size={18} />
           </button>
-          <button className="icon-button" type="button" onClick={onDuplicateNode}>
+          <button
+            className="icon-button"
+            type="button"
+            title="Duplicate node"
+            aria-label="Duplicate node"
+            onClick={onDuplicateNode}
+          >
             <Copy size={18} />
           </button>
-          <button className="icon-button" type="button" onClick={onDeleteNode}>
+          <button
+            className="icon-button"
+            type="button"
+            title="Delete node"
+            aria-label="Delete node"
+            onClick={onDeleteNode}
+          >
             <Trash2 size={18} />
           </button>
         </div>
@@ -728,6 +748,8 @@ function NodeEditorForm({
                   <button
                     className="icon-button"
                     type="button"
+                    title="Delete choice"
+                    aria-label="Delete choice"
                     onClick={() => onDeleteChoice(choice.id)}
                   >
                     <Trash2 size={17} />
@@ -787,6 +809,8 @@ function NodeEditorForm({
                     <button
                       className="icon-button"
                       type="button"
+                      title="Delete CTA"
+                      aria-label="Delete CTA"
                       onClick={() => onDeleteCta(index)}
                     >
                       <Trash2 size={17} />
