@@ -2,12 +2,20 @@ using System.Text.Json;
 
 namespace ThoughtFlow.Api.Contracts;
 
+public sealed record TagResponse(
+    Guid Id,
+    string Name,
+    string Color);
+
+public sealed record CreateTagRequest(string Name);
+
 public sealed record PublishedFlowResponse(
     Guid Id,
     string Slug,
     string Title,
     string? Description,
-    JsonElement Flow);
+    JsonElement Flow,
+    IReadOnlyList<TagResponse> Tags);
 
 public sealed record FlowSummaryResponse(
     Guid Id,
@@ -16,12 +24,14 @@ public sealed record FlowSummaryResponse(
     string? Description,
     bool IsPublished,
     DateTimeOffset CreatedAt,
-    DateTimeOffset UpdatedAt);
+    DateTimeOffset UpdatedAt,
+    IReadOnlyList<TagResponse> Tags);
 
 public sealed record SaveFlowRequest(
     string Title,
     string? Description,
     JsonElement Flow,
+    IReadOnlyList<Guid> TagIds,
     bool IsPublished = true);
 
 public sealed record SubmitFlowResultRequest(

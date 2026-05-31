@@ -17,9 +17,11 @@ import {
   savePublishedFlow,
   type FlowSummary,
 } from "../api/flows";
+import { listTags } from "../api/tags";
 import { veganEthicsFlow } from "../data/veganEthicsFlow";
 import { useFlowPlayer } from "../hooks/useFlowPlayer";
 import type {
+  Tag,
   ThoughtFlowChoice,
   ThoughtFlowCta,
   ThoughtFlowFlow,
@@ -28,6 +30,7 @@ import type {
 } from "../types/flow";
 import { FlowPlayer } from "./FlowPlayer";
 import { FlowLibrary } from "./FlowLibrary";
+import { TagComboBox } from "./TagComboBox";
 
 type ValidationIssue = {
   id: string;
@@ -55,6 +58,7 @@ export function FlowEditor() {
   const editorSlug = useMemo(() => editorSlugFromUrl(), []);
   const initialFlow = useMemo(() => flowForEditorUrl(editorSlug), [editorSlug]);
   const [flow, setFlow] = useState<ThoughtFlowFlow>(initialFlow);
+  const [availableTags, setAvailableTags] = useState<Tag[]>([]);
   const [selectedNodeId, setSelectedNodeId] = useState(initialFlow.startNodeId);
   const [previewStartNodeId, setPreviewStartNodeId] = useState(
     initialFlow.startNodeId,
@@ -92,6 +96,17 @@ export function FlowEditor() {
     mediaQuery.addEventListener("change", syncPreviewLayout);
 
     return () => mediaQuery.removeEventListener("change", syncPreviewLayout);
+  }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    listTags(controller.signal)
+      .then((tags) => setAvailableTags(tags))
+      .catch((e) => {
+        if (e instanceof DOMException && e.name === "AbortError") return;
+        console.error("Failed to fetch tags", e);
+      });
+    return () => controller.abort();
   }, []);
 
   useEffect(() => {
@@ -133,6 +148,7 @@ export function FlowEditor() {
           slug: publishedFlow.slug,
           title: publishedFlow.flow.title || publishedFlow.title,
           description: publishedFlow.flow.description ?? publishedFlow.description,
+          tags: publishedFlow.tags,
         };
 
         setFlow(loadedFlow);
@@ -301,6 +317,7 @@ export function FlowEditor() {
         title,
         description: nextFlow.description,
         flow: nextFlow,
+        tagIds: nextFlow.tags?.map((t) => t.id) ?? [],
       });
       setSaveState("saved");
     } catch {
@@ -350,7 +367,7 @@ export function FlowEditor() {
           </button>
         </div>
 
-        <div className="mb-4 border border-ink/10 bg-white/45 px-3 py-3">
+        <div className="mb-4 space-y-3 border border-ink/10 bg-white/45 px-3 py-3">
           <label className="block text-[11px] font-extrabold uppercase tracking-[0.14em] text-moss">
             Flow title
             <input

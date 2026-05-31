@@ -64,10 +64,10 @@ export function FlowSidebar({ flow, player }: FlowSidebarProps) {
         <div className="flex flex-wrap gap-2">
           {flow.tags?.map((tag) => (
             <span
-              className="rounded-sm bg-leaf/15 px-2.5 py-1 text-xs font-bold text-moss"
-              key={tag}
+              className={`rounded-sm px-2.5 py-1 text-xs font-bold text-white ${tag.color}`}
+              key={tag.id}
             >
-              {tag}
+              {tag.name}
             </span>
           ))}
         </div>

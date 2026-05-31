@@ -38,11 +38,25 @@ export function TopBar({ flow, onReset }: TopBarProps) {
         <div className="grid h-10 w-10 place-items-center rounded-sm bg-ink text-canvas shadow-node">
           <Sparkles size={19} strokeWidth={2.2} />
         </div>
-        <div className="min-w-0">
-          <p className="font-display text-xl leading-5">{siteName}</p>
-          <p className="truncate text-xs font-semibold uppercase tracking-[0.18em] text-moss">
-            {flow.title}
-          </p>
+        <div className="min-w-0 flex items-center gap-4">
+          <div>
+            <p className="font-display text-xl leading-5">{siteName}</p>
+            <p className="truncate text-xs font-semibold uppercase tracking-[0.18em] text-moss">
+              {flow.title}
+            </p>
+          </div>
+          {flow.tags && flow.tags.length > 0 ? (
+            <div className="hidden sm:flex items-center gap-1.5 border-l border-ink/10 pl-4">
+              {flow.tags.map((tag) => (
+                <span
+                  key={tag.id}
+                  className={`rounded-sm px-2 py-0.5 text-[10px] font-bold text-white ${tag.color}`}
+                >
+                  {tag.name}
+                </span>
+              ))}
+            </div>
+          ) : null}
         </div>
       </div>
       <div className="flex items-center gap-2">

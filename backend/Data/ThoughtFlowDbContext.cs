@@ -8,6 +8,7 @@ public sealed class ThoughtFlowDbContext(DbContextOptions<ThoughtFlowDbContext> 
 {
     public DbSet<Flow> Flows => Set<Flow>();
     public DbSet<FlowResult> FlowResults => Set<FlowResult>();
+    public DbSet<Tag> Tags => Set<Tag>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -50,5 +51,27 @@ public sealed class ThoughtFlowDbContext(DbContextOptions<ThoughtFlowDbContext> 
             entity.HasIndex(result => result.FlowId);
             entity.HasIndex(result => result.CreatedAt);
         });
+
+        modelBuilder.Entity<Tag>(entity =>
+        {
+            entity.ToTable("tags");
+            entity.HasKey(tag => tag.Id);
+
+            entity.Property(tag => tag.Id).HasColumnName("id");
+            entity.Property(tag => tag.Name).HasColumnName("name").HasColumnType("text").IsRequired();
+            entity.Property(tag => tag.Color).HasColumnName("color").HasColumnType("text").IsRequired();
+            entity.Property(tag => tag.CreatedAt).HasColumnName("created_at").HasColumnType("timestamptz").IsRequired();
+
+            entity.HasIndex(tag => tag.Name).IsUnique();
+        });
+
+        modelBuilder.Entity<Flow>()
+            .HasMany(f => f.Tags)
+            .WithMany(t => t.Flows)
+            .UsingEntity(
+                "flow_tags",
+                l => l.HasOne(typeof(Tag)).WithMany().HasForeignKey("tag_id").HasPrincipalKey(nameof(Tag.Id)),
+                r => r.HasOne(typeof(Flow)).WithMany().HasForeignKey("flow_id").HasPrincipalKey(nameof(Flow.Id)),
+                j => j.HasKey("flow_id", "tag_id"));
     }
 }

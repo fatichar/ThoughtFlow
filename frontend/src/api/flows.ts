@@ -1,4 +1,4 @@
-import type { SelectedChoice, ThoughtFlowFlow } from "../types/flow";
+import type { SelectedChoice, Tag, ThoughtFlowFlow } from "../types/flow";
 
 export type PublishedFlow = {
   id: string;
@@ -6,6 +6,7 @@ export type PublishedFlow = {
   title: string;
   description?: string;
   flow: ThoughtFlowFlow;
+  tags: Tag[];
 };
 
 export type FlowSummary = {
@@ -16,6 +17,7 @@ export type FlowSummary = {
   isPublished: boolean;
   createdAt: string;
   updatedAt: string;
+  tags: Tag[];
 };
 
 export type SubmitFlowResultInput = {
@@ -28,6 +30,7 @@ export type SavePublishedFlowInput = {
   title: string;
   description?: string;
   flow: ThoughtFlowFlow;
+  tagIds: string[];
 };
 
 export async function fetchPublishedFlow(slug: string, signal?: AbortSignal) {
@@ -67,6 +70,7 @@ export async function savePublishedFlow(input: SavePublishedFlowInput) {
       title: input.title,
       description: input.description,
       flow: input.flow,
+      tagIds: input.tagIds,
       isPublished: true,
     }),
   });

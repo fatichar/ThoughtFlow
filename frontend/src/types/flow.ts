@@ -1,9 +1,15 @@
+export type Tag = {
+  id: string;
+  name: string;
+  color: string;
+};
+
 export type ThoughtFlowFlow = {
   id: string;
   slug?: string;
   title: string;
   description?: string;
-  tags?: string[];
+  tags?: Tag[];
   startNodeId: string;
   nodes: Record<string, ThoughtFlowNode>;
 };
