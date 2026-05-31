@@ -13,4 +13,5 @@ public sealed class Flow
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
     public List<FlowResult> Results { get; set; } = [];
+    public List<Tag> Tags { get; set; } = [];
 }

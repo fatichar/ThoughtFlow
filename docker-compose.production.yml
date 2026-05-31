@@ -54,7 +54,7 @@ services:
       ASPNETCORE_FORWARDEDHEADERS_ENABLED: "true"
       ConnectionStrings__DefaultConnection: Host=${POSTGRES_HOST:-postgres};Port=${POSTGRES_PORT:-5432};Database=${POSTGRES_DB:-thoughtflow};Username=${POSTGRES_USER:-thoughtflow};Password=${POSTGRES_PASSWORD}
       Cors__AllowedOrigins__0: ${CORS_ALLOWED_ORIGIN}
-      Database__EnsureCreated: ${DATABASE_ENSURE_CREATED:-true}
+      Database__Migrate: ${DATABASE_MIGRATE:-true}
 
   web:
     image: ghcr.io/${GITHUB_OWNER}/thoughtflow-web:latest

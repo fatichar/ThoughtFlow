@@ -181,7 +181,7 @@ jobs:
           ensure_env POSTGRES_ADMIN_PASSWORD "${dinzer_pg_password:-change-me}"
           ensure_env CORS_ALLOWED_ORIGIN "https://thoughtflow.example.com"
           ensure_env WEB_PORT "10000"
-          ensure_env DATABASE_ENSURE_CREATED "true"
+          ensure_env DATABASE_MIGRATE "true"
           REMOTE
 
       - name: Deploy on VPS

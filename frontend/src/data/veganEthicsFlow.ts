@@ -5,7 +5,7 @@ export const veganEthicsFlow: ThoughtFlowFlow = {
   title: "Is Taste Enough?",
   description:
     "A short guided reasoning flow about taste, harm, necessity, and consistency.",
-  tags: ["veganism", "ethics", "education", "critical thinking"],
+  tags: [],
   startNodeId: "taste",
   nodes: {
     taste: {
