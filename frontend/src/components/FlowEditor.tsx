@@ -60,6 +60,7 @@ export function FlowEditor() {
     flowForEditorUrl(editorSlugFromUrl()),
   );
   const [availableTags, setAvailableTags] = useState<Tag[]>([]);
+  const [availableTags, setAvailableTags] = useState<Tag[]>([]);
   const [selectedNodeId, setSelectedNodeId] = useState(flow.startNodeId);
   const [previewStartNodeId, setPreviewStartNodeId] = useState(
     flow.startNodeId,
