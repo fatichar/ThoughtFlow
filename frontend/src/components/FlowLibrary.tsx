@@ -4,6 +4,7 @@ import type { FlowSummary } from "../api/flows";
 import { listTags } from "../api/tags";
 import { siteName } from "../config/site";
 import type { Tag } from "../types/flow";
+import { tagColorStyle } from "../utils/tagColors";
 
 type FlowLibraryProps = {
   flowSummaries: FlowSummary[];
@@ -83,11 +84,12 @@ export function FlowLibrary({
                     key={tag.id}
                     type="button"
                     onClick={() => toggleTag(tag.id)}
-                    className={`flex items-center gap-1 rounded-sm px-2.5 py-1 text-xs font-bold transition-all ${
-                      isSelected
-                        ? `text-white shadow-sm ${tag.color}`
+                      className={`flex items-center gap-1 rounded-sm px-2.5 py-1 text-xs font-bold transition-all ${
+                        isSelected
+                        ? "text-white shadow-sm"
                         : "bg-ink/5 text-ink/60 hover:bg-ink/10"
                     }`}
+                    style={isSelected ? tagColorStyle(tag.color) : undefined}
                   >
                     {tag.name}
                     {isSelected && <X size={12} strokeWidth={3} className="ml-0.5" />}
@@ -155,7 +157,8 @@ export function FlowLibrary({
                           {summary.tags.map(tag => (
                             <span
                               key={tag.id}
-                              className={`rounded-sm px-2 py-0.5 text-[10px] font-bold text-white ${tag.color}`}
+                              className="rounded-sm px-2 py-0.5 text-[10px] font-bold text-white shadow-sm"
+                              style={tagColorStyle(tag.color)}
                             >
                               {tag.name}
                             </span>

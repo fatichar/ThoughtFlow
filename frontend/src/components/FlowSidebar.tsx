@@ -1,6 +1,7 @@
 import { Braces, CircleDot, GitBranch, Tag } from "lucide-react";
 import type { ThoughtFlowFlow } from "../types/flow";
 import type { FlowPlayerState } from "../hooks/useFlowPlayer";
+import { tagColorStyle } from "../utils/tagColors";
 
 type FlowSidebarProps = {
   flow: ThoughtFlowFlow;
@@ -64,8 +65,9 @@ export function FlowSidebar({ flow, player }: FlowSidebarProps) {
         <div className="flex flex-wrap gap-2">
           {flow.tags?.map((tag) => (
             <span
-              className={`rounded-sm px-2.5 py-1 text-xs font-bold text-white ${tag.color}`}
+              className="rounded-sm px-2.5 py-1 text-xs font-bold text-white shadow-sm"
               key={tag.id}
+              style={tagColorStyle(tag.color)}
             >
               {tag.name}
             </span>

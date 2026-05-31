@@ -3,6 +3,7 @@ import { Check, RotateCcw, Share2, Sparkles } from "lucide-react";
 import { siteName } from "../config/site";
 import type { ThoughtFlowFlow } from "../types/flow";
 import { shareFlowUrl } from "../utils/shareFlow";
+import { tagColorStyle } from "../utils/tagColors";
 
 type TopBarProps = {
   flow: ThoughtFlowFlow;
@@ -50,7 +51,8 @@ export function TopBar({ flow, onReset }: TopBarProps) {
               {flow.tags.map((tag) => (
                 <span
                   key={tag.id}
-                  className={`rounded-sm px-2 py-0.5 text-[10px] font-bold text-white ${tag.color}`}
+                  className="rounded-sm px-2 py-0.5 text-[10px] font-bold text-white shadow-sm"
+                  style={tagColorStyle(tag.color)}
                 >
                   {tag.name}
                 </span>

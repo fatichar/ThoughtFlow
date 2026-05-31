@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { Plus, X } from "lucide-react";
 import { type Tag } from "../types/flow";
 import { createTag } from "../api/tags";
+import { tagColorStyle } from "../utils/tagColors";
 
 type TagComboBoxProps = {
   availableTags: Tag[];
@@ -27,6 +28,9 @@ export function TagComboBox({
     (tag) =>
       !selectedTagIds.has(tag.id) &&
       tag.name.toLowerCase().includes(query.toLowerCase()),
+  );
+  const exactMatch = filteredTags.find(
+    (tag) => tag.name.toLowerCase() === query.trim().toLowerCase(),
   );
 
   const showCreateOption =
@@ -63,14 +67,40 @@ export function TagComboBox({
     }
   }
 
-  function toggleTag(tag: Tag) {
+  function addTag(tag: Tag) {
     if (selectedTagIds.has(tag.id)) {
-      onTagsChange(selectedTags.filter((t) => t.id !== tag.id));
-    } else {
-      onTagsChange([...selectedTags, tag]);
+      return;
     }
+
+    onTagsChange([...selectedTags, tag]);
     setQuery("");
     setIsOpen(false);
+  }
+
+  function removeTag(tag: Tag) {
+    onTagsChange(selectedTags.filter((t) => t.id !== tag.id));
+  }
+
+  function handleInputKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
+    if (event.key !== "Enter") {
+      return;
+    }
+
+    event.preventDefault();
+
+    if (exactMatch) {
+      addTag(exactMatch);
+      return;
+    }
+
+    if (showCreateOption) {
+      void handleCreateTag();
+      return;
+    }
+
+    if (filteredTags.length === 1) {
+      addTag(filteredTags[0]);
+    }
   }
 
   return (
@@ -79,13 +109,18 @@ export function TagComboBox({
         {selectedTags.map((tag) => (
           <span
             key={tag.id}
-            className={`flex items-center gap-1 rounded-sm px-2.5 py-1 text-xs font-bold text-white ${tag.color}`}
+            className="flex cursor-default select-none items-center gap-1 rounded-sm px-2.5 py-1 text-xs font-bold text-white shadow-sm"
+            style={tagColorStyle(tag.color)}
           >
             {tag.name}
             <button
               type="button"
-              onClick={() => toggleTag(tag)}
-              className="ml-1 rounded-full p-0.5 hover:bg-black/20"
+              onClick={(event) => {
+                event.stopPropagation();
+                removeTag(tag);
+              }}
+              onMouseDown={(event) => event.stopPropagation()}
+              className="ml-1 grid h-4 w-4 place-items-center rounded-full hover:bg-black/20"
               aria-label={`Remove ${tag.name}`}
             >
               <X size={12} strokeWidth={3} />
@@ -105,6 +140,7 @@ export function TagComboBox({
           setIsOpen(true);
         }}
         onFocus={() => setIsOpen(true)}
+        onKeyDown={handleInputKeyDown}
       />
 
       {isOpen && (filteredTags.length > 0 || showCreateOption) ? (
@@ -114,7 +150,7 @@ export function TagComboBox({
               key={tag.id}
               type="button"
               className="w-full px-3 py-2 text-left text-sm hover:bg-leaf/10 hover:text-moss"
-              onClick={() => toggleTag(tag)}
+              onClick={() => addTag(tag)}
             >
               {tag.name}
             </button>

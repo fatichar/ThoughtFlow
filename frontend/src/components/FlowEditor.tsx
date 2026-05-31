@@ -363,15 +363,6 @@ export function FlowEditor() {
           <button
             className="icon-button"
             type="button"
-            title="Create flow"
-            aria-label="Create flow"
-            onClick={createFlow}
-          >
-            <FilePlus2 size={18} />
-          </button>
-          <button
-            className="icon-button"
-            type="button"
             title="Publish flow"
             aria-label="Publish flow"
             disabled={saveState === "saving"}
@@ -396,8 +387,8 @@ export function FlowEditor() {
               }
             />
           </label>
-          <label className="block text-[11px] font-extrabold uppercase tracking-[0.14em] text-moss">
-            Tags
+          <div className="block text-[11px] font-extrabold uppercase tracking-[0.14em] text-moss">
+            <p>Tags</p>
             <div className="mt-2 normal-case tracking-normal">
               <TagComboBox
                 availableTags={availableTags}
@@ -417,7 +408,7 @@ export function FlowEditor() {
                 }
               />
             </div>
-          </label>
+          </div>
           <p className="mt-1 truncate text-[11px] font-bold uppercase tracking-[0.12em] text-ink/45">
             /play/{flow.slug ?? flow.id}
           </p>
