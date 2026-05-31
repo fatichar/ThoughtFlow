@@ -52,16 +52,17 @@ const ctaLabelPrompt = "Try Vegan for 7 Days";
 const ctaUrlPrompt = "https://example.com";
 
 export function FlowEditor() {
-  const editorSlug = useMemo(() => editorSlugFromUrl(), []);
-  const initialFlow = useMemo(() => flowForEditorUrl(editorSlug), [editorSlug]);
-  const [flow, setFlow] = useState<ThoughtFlowFlow>(initialFlow);
-  const [selectedNodeId, setSelectedNodeId] = useState(initialFlow.startNodeId);
+  const [editorSlug, setEditorSlug] = useState(() => editorSlugFromUrl());
+  const [flow, setFlow] = useState<ThoughtFlowFlow>(() =>
+    flowForEditorUrl(editorSlugFromUrl()),
+  );
+  const [selectedNodeId, setSelectedNodeId] = useState(flow.startNodeId);
   const [previewStartNodeId, setPreviewStartNodeId] = useState(
-    initialFlow.startNodeId,
+    flow.startNodeId,
   );
   const [previewRunVersion, setPreviewRunVersion] = useState(0);
   const [expandedNodeIds, setExpandedNodeIds] = useState<Set<string>>(
-    () => new Set(Object.keys(initialFlow.nodes)),
+    () => new Set(Object.keys(flow.nodes)),
   );
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">(
     "idle",
@@ -83,6 +84,13 @@ export function FlowEditor() {
     [flow, previewRunVersion, previewStartNodeId],
   );
   const previewPlayer = useFlowPlayer(previewFlow);
+
+  useEffect(() => {
+    const syncEditorSlug = () => setEditorSlug(editorSlugFromUrl());
+
+    window.addEventListener("popstate", syncEditorSlug);
+    return () => window.removeEventListener("popstate", syncEditorSlug);
+  }, []);
 
   useEffect(() => {
     const mediaQuery = window.matchMedia("(max-width: 1180px)");
@@ -120,6 +128,10 @@ export function FlowEditor() {
 
   useEffect(() => {
     if (!editorSlug || editorSlug === "is-taste-enough") {
+      if (editorSlug === "is-taste-enough") {
+        loadFlowIntoEditor({ ...veganEthicsFlow, slug: "is-taste-enough" });
+      }
+
       return;
     }
 
@@ -135,11 +147,7 @@ export function FlowEditor() {
           description: publishedFlow.flow.description ?? publishedFlow.description,
         };
 
-        setFlow(loadedFlow);
-        setSelectedNodeId(loadedFlow.startNodeId);
-        setPreviewStartNodeId(loadedFlow.startNodeId);
-        setPreviewRunVersion((version) => version + 1);
-        setExpandedNodeIds(new Set(Object.keys(loadedFlow.nodes)));
+        loadFlowIntoEditor(loadedFlow);
       })
       .catch((error) => {
         if (error instanceof DOMException && error.name === "AbortError") {
@@ -149,6 +157,14 @@ export function FlowEditor() {
 
     return () => controller.abort();
   }, [editorSlug]);
+
+  function loadFlowIntoEditor(nextFlow: ThoughtFlowFlow) {
+    setFlow(nextFlow);
+    setSelectedNodeId(nextFlow.startNodeId);
+    setPreviewStartNodeId(nextFlow.startNodeId);
+    setPreviewRunVersion((version) => version + 1);
+    setExpandedNodeIds(new Set(Object.keys(nextFlow.nodes)));
+  }
 
   function updateNode(nodeId: string, patch: Partial<ThoughtFlowNode>) {
     setFlow((current) => ({
@@ -273,12 +289,9 @@ export function FlowEditor() {
 
   function createFlow() {
     const nextFlow = makeFlowDraft();
-    setFlow(nextFlow);
-    setSelectedNodeId(nextFlow.startNodeId);
-    setPreviewStartNodeId(nextFlow.startNodeId);
-    setPreviewRunVersion((version) => version + 1);
-    setExpandedNodeIds(new Set(Object.keys(nextFlow.nodes)));
+    loadFlowIntoEditor(nextFlow);
     window.history.pushState(null, "", `/editor/${nextFlow.slug}`);
+    setEditorSlug(nextFlow.slug ?? null);
   }
 
   async function saveFlowUrl() {
@@ -294,6 +307,7 @@ export function FlowEditor() {
     setSaveState("saving");
     setFlow(nextFlow);
     window.history.replaceState(null, "", `/editor/${slug}`);
+    setEditorSlug(slug);
 
     try {
       await savePublishedFlow({
