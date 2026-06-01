@@ -1,0 +1,3 @@
+## 2024-05-18 - Missing ARIA Labels on Deeper App Icon Buttons
+**Learning:** Icon buttons located deeper within the component tree, such as those within dynamically generated lists (choices, CTAs) and editor forms, often miss critical `aria-label` and `title` attributes, whereas top-level layout components (like navigation bars) typically include them correctly. This creates an inconsistent accessibility experience where core actions are accessible, but fine-grained editing actions are opaque to screen readers.
+**Action:** When implementing or reviewing dynamic lists and nested editor components containing icon-only buttons, explicitly check for and require `aria-label` and `title` attributes.
