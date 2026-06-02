@@ -1,0 +1,3 @@
+## 2024-06-02 - Icon-only Button Accessibility
+**Learning:** Icon-only buttons (like Play, Duplicate, Delete) in complex interfaces such as the Flow Editor can be overwhelming and confusing if they lack proper labeling. Even if their function seems obvious visually, screen readers and users who rely on tooltips require explicit descriptions. It is crucial to maintain consistency by ensuring every icon-only button has `aria-label` and `title` attributes.
+**Action:** When adding new icon-only actions (like in lists of choices, CTAs, or node controls), ensure `title` and `aria-label` are always included.
