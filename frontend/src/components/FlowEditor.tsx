@@ -655,13 +655,31 @@ function NodeEditorForm({
           </p>
         </div>
         <div className="flex gap-2">
-          <button className="icon-button" type="button" onClick={() => onPlayFromHere(node.id)}>
+          <button
+            className="icon-button"
+            type="button"
+            onClick={() => onPlayFromHere(node.id)}
+            title="Play from here"
+            aria-label="Play from here"
+          >
             <Play size={18} />
           </button>
-          <button className="icon-button" type="button" onClick={onDuplicateNode}>
+          <button
+            className="icon-button"
+            type="button"
+            onClick={onDuplicateNode}
+            title="Duplicate node"
+            aria-label="Duplicate node"
+          >
             <Copy size={18} />
           </button>
-          <button className="icon-button" type="button" onClick={onDeleteNode}>
+          <button
+            className="icon-button"
+            type="button"
+            onClick={onDeleteNode}
+            title="Delete node"
+            aria-label="Delete node"
+          >
             <Trash2 size={18} />
           </button>
         </div>
@@ -773,6 +791,8 @@ function NodeEditorForm({
                     className="icon-button"
                     type="button"
                     onClick={() => onDeleteChoice(choice.id)}
+                    title="Delete choice"
+                    aria-label="Delete choice"
                   >
                     <Trash2 size={17} />
                   </button>
@@ -832,6 +852,8 @@ function NodeEditorForm({
                       className="icon-button"
                       type="button"
                       onClick={() => onDeleteCta(index)}
+                      title="Delete CTA"
+                      aria-label="Delete CTA"
                     >
                       <Trash2 size={17} />
                     </button>
