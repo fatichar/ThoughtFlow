@@ -1,0 +1,3 @@
+## 2024-06-07 - Accessible Icon-Only Buttons
+**Learning:** Found several icon-only buttons (Play, Duplicate, Delete) in the Flow Editor lacking accessible names. Without ARIA labels, screen readers announce these purely visual controls poorly, impairing navigation and utility for visually impaired users.
+**Action:** Consistently add `aria-label` and `title` attributes to all icon-only buttons (`.icon-button`) across the application to ensure that assistive technologies can adequately describe their purpose.
