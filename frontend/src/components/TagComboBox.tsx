@@ -115,6 +115,7 @@ export function TagComboBox({
             {tag.name}
             <button
               type="button"
+              title={`Remove ${tag.name}`}
               onClick={(event) => {
                 event.stopPropagation();
                 removeTag(tag);
