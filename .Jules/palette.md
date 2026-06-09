@@ -1,0 +1,3 @@
+## 2024-05-24 - [Add ARIA Labels to Icon-only Buttons in Flow Editor]
+**Learning:** Found several icon-only buttons (`<button className="icon-button">` with Lucide icons) in the `FlowEditor` that lacked context for assistive technologies. These patterns are common in dense editor UIs to save space, but create significant barriers for screen reader users and those needing visual tooltips for clarification.
+**Action:** When adding or encountering icon-only interactive elements, ensure they consistently have both `aria-label` (for screen readers) and `title` (for native browser tooltips on hover).
