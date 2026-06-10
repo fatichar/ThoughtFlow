@@ -1,0 +1,3 @@
+## 2024-06-25 - Missing ARIA Labels on Internal Editor Icon Buttons
+**Learning:** While the primary user-facing UI (like `TopBar.tsx`) has well-defined accessibility properties (like `aria-label` and `title` on icon-only buttons), the internal editor components (like `FlowEditor.tsx`) frequently missed them. This reveals a gap where accessibility might be overlooked in "admin" or "internal" facing tools, despite being just as important there.
+**Action:** Always check internal tooling/admin interfaces for basic accessibility features like ARIA labels, as they are commonly missed during initial development. Ensure all new icon buttons added to the editor include these attributes.
