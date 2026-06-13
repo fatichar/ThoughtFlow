@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using ThoughtFlow.Api.Contracts;
+using Scalar.AspNetCore;
 using ThoughtFlow.Api.Data;
 using ThoughtFlow.Api.Data.Entities;
 using ThoughtFlow.Api.Seed;
@@ -28,6 +29,8 @@ builder.Services.AddDbContext<ThoughtFlowDbContext>(options =>
     options.UseNpgsql(connectionString));
 builder.Services.AddScoped<FlowSeeder>();
 
+builder.Services.AddOpenApi();
+
 var app = builder.Build();
 
 if (app.Configuration.GetValue("Database:Migrate", false))
@@ -38,6 +41,12 @@ if (app.Configuration.GetValue("Database:Migrate", false))
 }
 
 app.UseCors("Frontend");
+
+if (app.Environment.IsDevelopment())
+{
+    app.MapOpenApi();
+    app.MapScalarApiReference();
+}
 
 app.MapGet("/api/health", () => Results.Ok(new
 {
@@ -89,7 +98,7 @@ app.MapGet("/api/flows/{slug}", async (
         flow.Slug,
         flow.Title,
         flow.Description,
-        flow.FlowJson.RootElement.Clone(),
+        flow.FlowJson.Deserialize<FlowModel>(new JsonSerializerOptions(JsonSerializerDefaults.Web))!,
         flow.Tags.Select(t => new TagResponse(t.Id, t.Name, t.Color)).ToList()));
 });
 
@@ -106,7 +115,7 @@ app.MapPut("/api/flows/{slug}", async (
     }
 
     var now = DateTimeOffset.UtcNow;
-    var flowJson = JsonDocument.Parse(request.Flow.GetRawText());
+    var flowJson = JsonDocument.Parse(JsonSerializer.Serialize(request.Flow, new JsonSerializerOptions(JsonSerializerDefaults.Web)));
     var title = string.IsNullOrWhiteSpace(request.Title) ? TitleFromSlug(slug) : request.Title.Trim();
     var description = string.IsNullOrWhiteSpace(request.Description) ? null : request.Description.Trim();
     var flow = await dbContext.Flows
@@ -142,7 +151,7 @@ app.MapPut("/api/flows/{slug}", async (
         flow.Slug,
         flow.Title,
         flow.Description,
-        flow.FlowJson.RootElement.Clone(),
+        flow.FlowJson.Deserialize<FlowModel>(new JsonSerializerOptions(JsonSerializerDefaults.Web))!,
         flow.Tags.Select(t => new TagResponse(t.Id, t.Name, t.Color)).ToList()));
 });
 
@@ -284,9 +293,9 @@ static string? ValidateSaveFlowRequest(string slug, SaveFlowRequest request)
         return "slug is required.";
     }
 
-    if (request.Flow.ValueKind is not JsonValueKind.Object)
+    if (request.Flow is null)
     {
-        return "flow must be a JSON object.";
+        return "flow is required.";
     }
 
     return null;

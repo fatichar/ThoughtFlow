@@ -14,7 +14,7 @@ public sealed record PublishedFlowResponse(
     string Slug,
     string Title,
     string? Description,
-    JsonElement Flow,
+    FlowModel Flow,
     IReadOnlyList<TagResponse> Tags);
 
 public sealed record FlowSummaryResponse(
@@ -30,7 +30,7 @@ public sealed record FlowSummaryResponse(
 public sealed record SaveFlowRequest(
     string Title,
     string? Description,
-    JsonElement Flow,
+    FlowModel Flow,
     IReadOnlyList<Guid> TagIds,
     bool IsPublished = true);
 
