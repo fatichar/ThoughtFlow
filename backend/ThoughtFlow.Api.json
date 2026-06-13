@@ -1,0 +1,415 @@
+{
+  "openapi": "3.1.1",
+  "info": {
+    "title": "ThoughtFlow.Api | v1",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/api/health": {
+      "get": {
+        "tags": [
+          "ThoughtFlow.Api"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/flows": {
+      "get": {
+        "tags": [
+          "ThoughtFlow.Api"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/flows/{slug}": {
+      "get": {
+        "tags": [
+          "ThoughtFlow.Api"
+        ],
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "ThoughtFlow.Api"
+        ],
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveFlowRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/tags": {
+      "get": {
+        "tags": [
+          "ThoughtFlow.Api"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "ThoughtFlow.Api"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTagRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/tags/{id}": {
+      "delete": {
+        "tags": [
+          "ThoughtFlow.Api"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/flows/{slug}/results": {
+      "post": {
+        "tags": [
+          "ThoughtFlow.Api"
+        ],
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmitFlowResultRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ChoiceModel": {
+        "required": [
+          "id",
+          "label",
+          "targetNodeId"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "targetNodeId": {
+            "type": "string"
+          }
+        }
+      },
+      "CreateTagRequest": {
+        "required": [
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "CtaModel": {
+        "required": [
+          "label",
+          "url",
+          "style"
+        ],
+        "type": "object",
+        "properties": {
+          "label": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "style": {
+            "type": "string"
+          }
+        }
+      },
+      "FlowModel": {
+        "required": [
+          "id",
+          "title",
+          "slug",
+          "description",
+          "tags",
+          "startNodeId",
+          "nodes"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "slug": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "description": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "tags": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/TagResponse"
+            }
+          },
+          "startNodeId": {
+            "type": "string"
+          },
+          "nodes": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/NodeModel"
+            }
+          }
+        }
+      },
+      "NodeModel": {
+        "required": [
+          "id",
+          "title",
+          "text",
+          "type",
+          "choices",
+          "ctas"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "choices": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ChoiceModel"
+            }
+          },
+          "ctas": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/CtaModel"
+            }
+          }
+        }
+      },
+      "SaveFlowRequest": {
+        "required": [
+          "title",
+          "description",
+          "flow",
+          "tagIds"
+        ],
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "flow": {
+            "$ref": "#/components/schemas/FlowModel"
+          },
+          "tagIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "isPublished": {
+            "type": "boolean",
+            "default": true
+          }
+        }
+      },
+      "SubmitFlowResultRequest": {
+        "required": [
+          "path",
+          "finalNodeId"
+        ],
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SubmittedPathStep"
+            }
+          },
+          "finalNodeId": {
+            "type": "string"
+          }
+        }
+      },
+      "SubmittedPathStep": {
+        "required": [
+          "nodeId",
+          "choiceId",
+          "choiceLabel",
+          "targetNodeId"
+        ],
+        "type": "object",
+        "properties": {
+          "nodeId": {
+            "type": "string"
+          },
+          "choiceId": {
+            "type": "string"
+          },
+          "choiceLabel": {
+            "type": "string"
+          },
+          "targetNodeId": {
+            "type": "string"
+          }
+        }
+      },
+      "TagResponse": {
+        "required": [
+          "id",
+          "name",
+          "color"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "color": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "ThoughtFlow.Api"
+    }
+  ]
+}
