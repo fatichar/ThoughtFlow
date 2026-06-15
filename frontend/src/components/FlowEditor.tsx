@@ -72,7 +72,7 @@ const nodeTypes: ThoughtFlowNodeType[] = [
   "action",
 ];
 
-const flowTitlePrompt = "Untitled Flow";
+const flowTitlePrompt = "Required flow title";
 const draftStoragePrefix = "thoughtflow-editor-draft";
 
 export function FlowEditor() {
@@ -533,8 +533,14 @@ export function FlowEditor() {
   }
 
   async function saveFlowUrl() {
+    if (!flow.title.trim()) {
+      setSaveState("error");
+      setSaveError("Flow title is required before publishing.");
+      return;
+    }
+
     const slug = slugify(flow.title);
-    const title = flow.title.trim() || titleFromSlug(slug);
+    const title = flow.title.trim();
     const nextFlow = {
       ...flow,
       id: slugToId(slug),
@@ -753,7 +759,7 @@ function EditorInspector({
           Flow details
         </p>
         <label className="editor-label">
-          Flow title
+          Flow title required
           <input
             className="editor-input"
             placeholder={flowTitlePrompt}
@@ -1185,7 +1191,7 @@ function removePosition(
 }
 
 function makeSaveInput(flow: ThoughtFlowFlow, slug: string): SavePublishedFlowInput {
-  const title = flow.title.trim() || titleFromSlug(slug);
+  const title = flow.title.trim();
   const nextFlow = {
     ...flow,
     id: slugToId(slug),

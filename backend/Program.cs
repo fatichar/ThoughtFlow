@@ -116,7 +116,7 @@ app.MapPut("/api/flows/{slug}", async (
 
     var now = DateTimeOffset.UtcNow;
     var flowJson = JsonDocument.Parse(JsonSerializer.Serialize(request.Flow, new JsonSerializerOptions(JsonSerializerDefaults.Web)));
-    var title = string.IsNullOrWhiteSpace(request.Title) ? TitleFromSlug(slug) : request.Title.Trim();
+    var title = request.Title.Trim();
     var description = string.IsNullOrWhiteSpace(request.Description) ? null : request.Description.Trim();
     var flow = await dbContext.Flows
         .Include(f => f.Tags)
@@ -298,6 +298,16 @@ static string? ValidateSaveFlowRequest(string slug, SaveFlowRequest request)
         return "flow is required.";
     }
 
+    if (string.IsNullOrWhiteSpace(request.Title))
+    {
+        return "title is required.";
+    }
+
+    if (string.IsNullOrWhiteSpace(request.Flow.Title))
+    {
+        return "flow.title is required.";
+    }
+
     return null;
 }
 
@@ -322,11 +332,3 @@ static string? ValidateResultRequest(SubmitFlowResultRequest request)
     return null;
 }
 
-static string TitleFromSlug(string slug)
-{
-    var words = slug
-        .Split('-', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-        .Select(word => char.ToUpperInvariant(word[0]) + word[1..]);
-
-    return string.Join(' ', words);
-}
