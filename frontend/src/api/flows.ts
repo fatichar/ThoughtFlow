@@ -76,7 +76,7 @@ export async function savePublishedFlow(input: SavePublishedFlowInput) {
   });
 
   if (!response.ok) {
-    throw new Error("Could not save flow");
+    throw new Error(await responseErrorMessage(response, "Could not save flow"));
   }
 
   return (await response.json()) as PublishedFlow;
@@ -105,5 +105,16 @@ export async function submitFlowResult(
 
   if (!response.ok) {
     throw new Error("Could not submit result");
+  }
+}
+
+async function responseErrorMessage(response: Response, fallback: string) {
+  try {
+    const body = (await response.json()) as { error?: string };
+    return body.error
+      ? `${fallback}: ${body.error}`
+      : `${fallback}: HTTP ${response.status}`;
+  } catch {
+    return `${fallback}: HTTP ${response.status}`;
   }
 }
