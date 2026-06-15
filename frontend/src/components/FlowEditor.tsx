@@ -72,7 +72,7 @@ const nodeTypes: ThoughtFlowNodeType[] = [
   "action",
 ];
 
-const flowTitlePrompt = "Untitled Flow";
+const flowTitlePrompt = "Required flow title";
 const draftStoragePrefix = "thoughtflow-editor-draft";
 
 export function FlowEditor() {
@@ -533,8 +533,21 @@ export function FlowEditor() {
   }
 
   async function saveFlowUrl() {
+    if (!flow.title.trim()) {
+      setSaveState("error");
+      setSaveError("Flow title is required before publishing.");
+      return;
+    }
+
+    const blockingIssue = validation.find((issue) => issue.severity === "error");
+    if (blockingIssue) {
+      setSaveState("error");
+      setSaveError(blockingIssue.label);
+      return;
+    }
+
     const slug = slugify(flow.title);
-    const title = flow.title.trim() || titleFromSlug(slug);
+    const title = flow.title.trim();
     const nextFlow = {
       ...flow,
       id: slugToId(slug),
@@ -753,7 +766,7 @@ function EditorInspector({
           Flow details
         </p>
         <label className="editor-label">
-          Flow title
+          Flow title required
           <input
             className="editor-input"
             placeholder={flowTitlePrompt}
@@ -1079,6 +1092,15 @@ function validateFlow(flow: ThoughtFlowFlow) {
   }
 
   for (const node of Object.values(flow.nodes)) {
+    if (!node.title.trim()) {
+      issueMap.set(`missing-title-${node.id}`, {
+        id: `missing-title-${node.id}`,
+        label: `${node.id} is missing a card title.`,
+        nodeId: node.id,
+        severity: "error",
+      });
+    }
+
     if (!reachableNodeIds.has(node.id)) {
       issueMap.set(`unreachable-${node.id}`, {
         id: `unreachable-${node.id}`,
@@ -1185,7 +1207,7 @@ function removePosition(
 }
 
 function makeSaveInput(flow: ThoughtFlowFlow, slug: string): SavePublishedFlowInput {
-  const title = flow.title.trim() || titleFromSlug(slug);
+  const title = flow.title.trim();
   const nextFlow = {
     ...flow,
     id: slugToId(slug),

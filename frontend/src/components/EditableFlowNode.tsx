@@ -106,14 +106,10 @@ function EditableFlowNodeComponent({ data }: NodeProps) {
           </span>
         ) : null}
       </div>
-      <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.14em] text-ink/35">
-        Drag card to arrange
-      </p>
-
       <input
         aria-label="Node title"
         className="nodrag editable-node-title"
-        placeholder="Optional short label"
+        placeholder="Card title"
         value={node.title}
         onChange={(event) => onUpdateNode(node.id, { title: event.target.value })}
       />
@@ -123,8 +119,8 @@ function EditableFlowNodeComponent({ data }: NodeProps) {
         className="nodrag nowheel editable-node-text"
         placeholder={
           node.type === "question"
-            ? "Write the opening question or idea for this flow."
-            : "Write the thought, question, or next step here."
+            ? "Optional description or context."
+            : "Optional supporting description."
         }
         value={node.text}
         onChange={(event) => onUpdateNode(node.id, { text: event.target.value })}

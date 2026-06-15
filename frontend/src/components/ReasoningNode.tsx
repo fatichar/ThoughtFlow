@@ -110,19 +110,12 @@ function ReasoningNodeComponent({ data }: NodeProps) {
         ) : null}
       </div>
 
-      {node.title.trim() ? (
-        <h2 className="font-display text-[28px] leading-none text-ink">
-          {node.title}
-        </h2>
+      <h2 className="font-display text-[28px] leading-none text-ink">
+        {node.title}
+      </h2>
+      {node.text.trim() ? (
+        <p className="mt-3 text-[15px] leading-6 text-ink/75">{node.text}</p>
       ) : null}
-      <p
-        className={[
-          "text-[15px] leading-6 text-ink/75",
-          node.title.trim() ? "mt-3" : "mt-0",
-        ].join(" ")}
-      >
-        {node.text}
-      </p>
 
       {isAction ? (
         <div className="mt-6">
