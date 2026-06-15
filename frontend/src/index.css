@@ -90,7 +90,11 @@ button {
 }
 
 .editable-flow-node {
-  @apply cursor-default;
+  @apply cursor-grab;
+}
+
+.editable-flow-node:active {
+  @apply cursor-grabbing;
 }
 
 .editable-flow-node-selected {

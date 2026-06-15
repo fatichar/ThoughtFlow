@@ -106,6 +106,9 @@ function EditableFlowNodeComponent({ data }: NodeProps) {
           </span>
         ) : null}
       </div>
+      <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.14em] text-ink/35">
+        Drag card to arrange
+      </p>
 
       <input
         aria-label="Node title"

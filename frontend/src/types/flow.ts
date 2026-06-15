@@ -10,8 +10,18 @@ export type ThoughtFlowFlow = {
   title: string;
   description?: string;
   tags?: Tag[];
+  editor?: ThoughtFlowEditorState;
   startNodeId: string;
   nodes: Record<string, ThoughtFlowNode>;
+};
+
+export type ThoughtFlowEditorState = {
+  positions?: Record<string, ThoughtFlowNodePosition>;
+};
+
+export type ThoughtFlowNodePosition = {
+  x: number;
+  y: number;
 };
 
 export type ThoughtFlowNodeType =

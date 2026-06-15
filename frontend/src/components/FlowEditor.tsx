@@ -22,7 +22,7 @@ import {
   Save,
   Trash2,
 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import {
   fetchPublishedFlow,
   listFlows,
@@ -38,6 +38,7 @@ import type {
   ThoughtFlowCta,
   ThoughtFlowFlow,
   ThoughtFlowNode,
+  ThoughtFlowNodePosition,
   ThoughtFlowNodeType,
 } from "../types/flow";
 import { layoutEditableFlow } from "../utils/layoutEditorFlow";
@@ -280,6 +281,13 @@ export function FlowEditor() {
     setSaveError(null);
     setFlow((current) => ({
       ...current,
+      editor: {
+        ...current.editor,
+        positions: {
+          ...current.editor?.positions,
+          [id]: nextAvailablePosition(current),
+        },
+      },
       nodes: {
         ...current.nodes,
         [id]: makeNode(id, "question"),
@@ -298,6 +306,13 @@ export function FlowEditor() {
     setSaveError(null);
     setFlow((current) => ({
       ...current,
+      editor: {
+        ...current.editor,
+        positions: {
+          ...current.editor?.positions,
+          [id]: offsetPosition(current.editor?.positions?.[selectedNode.id], 48, 48),
+        },
+      },
       nodes: {
         ...current.nodes,
         [id]: {
@@ -336,7 +351,14 @@ export function FlowEditor() {
         };
       }
 
-      return { ...current, nodes: nextNodes };
+      return {
+        ...current,
+        editor: {
+          ...current.editor,
+          positions: removePosition(current.editor?.positions, deletedNodeId),
+        },
+        nodes: nextNodes,
+      };
     });
     setSelectedNodeId(flow.startNodeId);
   }
@@ -395,6 +417,13 @@ export function FlowEditor() {
     setSaveError(null);
     setFlow((current) => ({
       ...current,
+      editor: {
+        ...current.editor,
+        positions: {
+          ...current.editor?.positions,
+          [id]: offsetPosition(current.editor?.positions?.[nodeId], 520, 180),
+        },
+      },
       nodes: {
         ...current.nodes,
         [id]: node,
@@ -456,6 +485,33 @@ export function FlowEditor() {
       targetNodeId: connection.target,
     });
     setSelectedNodeId(connection.source);
+  }
+
+  function moveNode(_: MouseEvent, node: Node<EditableFlowNodeData>) {
+    setSaveState("idle");
+    setSaveError(null);
+    setFlow((current) => ({
+      ...current,
+      editor: {
+        ...current.editor,
+        positions: {
+          ...current.editor?.positions,
+          [node.id]: {
+            x: Math.round(node.position.x),
+            y: Math.round(node.position.y),
+          },
+        },
+      },
+    }));
+  }
+
+  function resetLayout() {
+    setSaveState("idle");
+    setSaveError(null);
+    setFlow((current) => {
+      const { editor: _editor, ...flowWithoutEditor } = current;
+      return flowWithoutEditor;
+    });
   }
 
   function setSelectedAsStart() {
@@ -550,6 +606,9 @@ export function FlowEditor() {
             <Download size={16} />
             Export
           </button>
+          <button className="editor-toolbar-button" type="button" onClick={resetLayout}>
+            Reset layout
+          </button>
           <button className="editor-toolbar-button" type="button" onClick={addNode}>
             <Plus size={16} />
             Node
@@ -581,9 +640,10 @@ export function FlowEditor() {
               minZoom={0.32}
               nodes={nodes}
               nodesConnectable
-              nodesDraggable={false}
+              nodesDraggable
               nodeTypes={editorNodeTypes}
               onConnect={connectChoice}
+              onNodeDragStop={moveNode}
               onNodeClick={(_, node) => selectNode(node.id)}
               panOnScroll
               proOptions={{ hideAttribution: true }}
@@ -1092,6 +1152,45 @@ function collectReachableNodeIds(flow: ThoughtFlowFlow) {
   }
 
   return reachableNodeIds;
+}
+
+function nextAvailablePosition(flow: ThoughtFlowFlow): ThoughtFlowNodePosition {
+  const positions = Object.values(flow.editor?.positions ?? {});
+  if (positions.length === 0) {
+    return {
+      x: Object.keys(flow.nodes).length * 120,
+      y: 720,
+    };
+  }
+
+  const rightmost = positions.reduce((max, position) =>
+    position.x > max.x ? position : max,
+  );
+  return offsetPosition(rightmost, 520, 0);
+}
+
+function offsetPosition(
+  position: ThoughtFlowNodePosition | undefined,
+  offsetX: number,
+  offsetY: number,
+): ThoughtFlowNodePosition {
+  return {
+    x: Math.round((position?.x ?? 0) + offsetX),
+    y: Math.round((position?.y ?? 0) + offsetY),
+  };
+}
+
+function removePosition(
+  positions: Record<string, ThoughtFlowNodePosition> | undefined,
+  nodeId: string,
+) {
+  if (!positions) {
+    return undefined;
+  }
+
+  const nextPositions = { ...positions };
+  delete nextPositions[nodeId];
+  return nextPositions;
 }
 
 function makeSaveInput(flow: ThoughtFlowFlow, slug: string): SavePublishedFlowInput {
