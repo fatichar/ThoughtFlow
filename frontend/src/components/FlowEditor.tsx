@@ -104,7 +104,7 @@ export function FlowEditor() {
           id,
           type: "editable",
           position,
-          draggable: false,
+          dragHandle: ".node-drag-handle",
           data: {
             node,
             isSelected: id === selectedNode?.id,
@@ -627,7 +627,7 @@ export function FlowEditor() {
         <ReactFlowProvider>
           <section className="relative min-h-0 overflow-hidden border-r border-ink/10 max-[980px]:h-[62vh] max-[980px]:border-r-0">
             <div className="pointer-events-none absolute left-5 top-5 z-10 max-w-md rounded-sm border border-ink/10 bg-[#f9f6ed]/85 px-3 py-2 text-xs font-bold uppercase tracking-[0.16em] text-moss shadow-sm backdrop-blur">
-              Edit cards directly. Drag from a choice handle to connect it.
+              Drag cards to arrange. Scroll to pan. Drag from a choice handle to connect.
             </div>
             <ReactFlow
               colorMode="light"
@@ -643,6 +643,7 @@ export function FlowEditor() {
               onConnect={connectChoice}
               onNodeDragStop={moveNode}
               onNodeClick={(_, node) => selectNode(node.id)}
+              panOnDrag={false}
               panOnScroll
               proOptions={{ hideAttribution: true }}
             >

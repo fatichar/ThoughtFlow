@@ -84,7 +84,7 @@ function EditableFlowNodeComponent({ data }: NodeProps) {
     <article
       className={[
         isAction ? "action-node editable-flow-node-action" : "reasoning-node",
-        "editable-flow-node",
+        "editable-flow-node node-drag-handle",
         isSelected ? "editable-flow-node-selected" : "",
       ].join(" ")}
       onFocus={() => onSelect(node.id)}
