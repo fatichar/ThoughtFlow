@@ -113,7 +113,7 @@ function EditableFlowNodeComponent({ data }: NodeProps) {
       <input
         aria-label="Node title"
         className="nodrag editable-node-title"
-        placeholder={isStartNode ? "Start here" : "Untitled node"}
+        placeholder="Optional short label"
         value={node.title}
         onChange={(event) => onUpdateNode(node.id, { title: event.target.value })}
       />

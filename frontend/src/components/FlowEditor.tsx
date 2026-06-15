@@ -73,8 +73,6 @@ const nodeTypes: ThoughtFlowNodeType[] = [
 ];
 
 const flowTitlePrompt = "Untitled Flow";
-const startNodeTitlePrompt = "Start here";
-const nodeTitlePrompt = "Untitled node";
 const draftStoragePrefix = "thoughtflow-editor-draft";
 
 export function FlowEditor() {
@@ -811,10 +809,10 @@ function EditorInspector({
           <div className="mb-3 flex items-start justify-between gap-3">
             <div className="min-w-0">
               <p className="truncate font-display text-2xl leading-7">
-                {selectedNode.title || nodeTitleFallback(selectedNode, flow)}
+                {selectedNode.id}
               </p>
               <p className="mt-1 truncate text-[11px] font-bold uppercase tracking-[0.16em] text-moss">
-                {selectedNode.id}
+                {selectedNode.type}
               </p>
             </div>
             <div className="flex gap-2">
@@ -1083,7 +1081,7 @@ function validateFlow(flow: ThoughtFlowFlow) {
     if (!reachableNodeIds.has(node.id)) {
       issueMap.set(`unreachable-${node.id}`, {
         id: `unreachable-${node.id}`,
-        label: `${node.title || nodeTitleFallback(node, flow)} is unreachable from the start node.`,
+        label: `${node.id} is unreachable from the start node.`,
         nodeId: node.id,
         severity: "warning",
       });
@@ -1096,7 +1094,7 @@ function validateFlow(flow: ThoughtFlowFlow) {
     ) {
       issueMap.set(`dead-${node.id}`, {
         id: `dead-${node.id}`,
-        label: `${node.title || nodeTitleFallback(node, flow)} is a dead-end ${node.type} node.`,
+        label: `${node.id} is a dead-end ${node.type} node.`,
         nodeId: node.id,
         severity: "warning",
       });
@@ -1106,7 +1104,7 @@ function validateFlow(flow: ThoughtFlowFlow) {
       if (!choice.targetNodeId || !flow.nodes[choice.targetNodeId]) {
         issueMap.set(`missing-${node.id}-${choice.id}`, {
           id: `missing-${node.id}-${choice.id}`,
-          label: `${node.title || nodeTitleFallback(node, flow)} has a choice with a missing target.`,
+          label: `${node.id} has a choice with a missing target.`,
           nodeId: node.id,
           severity: "error",
         });
@@ -1117,17 +1115,9 @@ function validateFlow(flow: ThoughtFlowFlow) {
   return [...issueMap.values()];
 }
 
-function nodeTitleFallback(node: ThoughtFlowNode, flow: ThoughtFlowFlow) {
-  return node.id === flow.startNodeId ? startNodeTitlePrompt : nodeTitlePrompt;
-}
-
 function targetOptionLabel(target: ThoughtFlowNode, flow: ThoughtFlowFlow) {
-  const title = target.title || nodeTitleFallback(target, flow);
-  const duplicateTitleCount = Object.values(flow.nodes).filter(
-    (node) => (node.title || nodeTitleFallback(node, flow)) === title,
-  ).length;
-
-  return duplicateTitleCount > 1 ? `${title} (${target.id})` : title;
+  const marker = target.id === flow.startNodeId ? "start" : target.type;
+  return `${target.id} (${marker})`;
 }
 
 function collectReachableNodeIds(flow: ThoughtFlowFlow) {
