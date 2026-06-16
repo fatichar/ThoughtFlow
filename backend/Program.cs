@@ -339,4 +339,3 @@ static string? ValidateResultRequest(SubmitFlowResultRequest request)
 
     return null;
 }
-

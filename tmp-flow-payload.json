@@ -1,0 +1,186 @@
+{
+  "title": "Do you want to stop cow slaughter?",
+  "description": "A short guided flow about whether reducing harm to cows points toward moving away from dairy consumption.",
+  "flow": {
+    "id": "stop-cow-slaughter-flow",
+    "title": "Do you want to stop cow slaughter?",
+    "slug": "do-you-want-to-stop-cow-slaughter",
+    "description": "A short guided flow about whether reducing harm to cows points toward moving away from dairy consumption.",
+    "tags": [],
+    "startNodeId": "opening",
+    "nodes": {
+      "opening": {
+        "id": "opening",
+        "title": "Do you want to stop cow slaughter?",
+        "text": "If your goal is to reduce the number of cows sent into the slaughter system, what matters most is understanding what keeps that system economically alive.",
+        "type": "question",
+        "choices": [
+          {
+            "id": "opening-yes",
+            "label": "Yes",
+            "targetNodeId": "yes-demand"
+          },
+          {
+            "id": "opening-no",
+            "label": "No",
+            "targetNodeId": "no-reason"
+          }
+        ]
+      },
+      "yes-demand": {
+        "id": "yes-demand",
+        "title": "Where does the demand come from?",
+        "text": "Most cows slaughtered in the dairy system are not separate from milk production. Male calves are routinely treated as byproducts, and female cows are slaughtered when their milk output declines.",
+        "type": "information",
+        "choices": [
+          {
+            "id": "yes-demand-next",
+            "label": "So dairy and slaughter are connected",
+            "targetNodeId": "yes-link"
+          }
+        ]
+      },
+      "yes-link": {
+        "id": "yes-link",
+        "title": "Following the link",
+        "text": "If dairy keeps breeding cows into the system, then buying milk, curd, ghee, paneer, butter, or cheese still funds the same pipeline that ends in slaughter.",
+        "type": "question",
+        "choices": [
+          {
+            "id": "yes-link-accept",
+            "label": "That means dairy reduction matters",
+            "targetNodeId": "yes-consistency"
+          },
+          {
+            "id": "yes-link-doubt",
+            "label": "I want a more practical conclusion",
+            "targetNodeId": "yes-practical"
+          }
+        ]
+      },
+      "yes-consistency": {
+        "id": "yes-consistency",
+        "title": "Consistency",
+        "text": "If the aim is to stop cow slaughter rather than only feel opposed to it, the consistent step is to withdraw support from the industry that keeps producing cows for milk and eventual killing.",
+        "type": "information",
+        "choices": [
+          {
+            "id": "yes-consistency-next",
+            "label": "What does that mean in practice?",
+            "targetNodeId": "yes-practical"
+          }
+        ]
+      },
+      "yes-practical": {
+        "id": "yes-practical",
+        "title": "A practical step",
+        "text": "On that reasoning, quitting dairy consumption is the clearest direct step: it reduces demand for repeated impregnation, calf separation, and the eventual slaughter built into dairy economics.",
+        "type": "conclusion",
+        "choices": [
+          {
+            "id": "yes-practical-next",
+            "label": "Show simple next steps",
+            "targetNodeId": "yes-next-steps"
+          }
+        ],
+        "ctas": [
+          {
+            "label": "Try plant-based alternatives for a week",
+            "url": "https://thoughtflow.in",
+            "style": "primary"
+          }
+        ]
+      },
+      "yes-next-steps": {
+        "id": "yes-next-steps",
+        "title": "Simple next steps",
+        "text": "A calm starting point is to replace the dairy products you use most often first, then expand from there. The point is not perfection overnight; it is stopping support for the system you want to end.",
+        "type": "action",
+        "choices": [
+          {
+            "id": "yes-finish",
+            "label": "Finish",
+            "targetNodeId": "yes-finish-node"
+          }
+        ]
+      },
+      "yes-finish-node": {
+        "id": "yes-finish-node",
+        "title": "End",
+        "text": "If stopping cow slaughter is the goal, quitting dairy is the most direct consistent move because dairy is not separate from slaughter but one of its main drivers.",
+        "type": "conclusion",
+        "choices": []
+      },
+      "no-reason": {
+        "id": "no-reason",
+        "title": "What is behind the answer?",
+        "text": "Is that mainly because this feels like a religious or political issue to you, or because cruelty to animals is not something you place much weight on?",
+        "type": "question",
+        "choices": [
+          {
+            "id": "no-reason-politics",
+            "label": "It feels religious or political",
+            "targetNodeId": "no-politics"
+          },
+          {
+            "id": "no-reason-cruelty",
+            "label": "I do not care that much about animal cruelty",
+            "targetNodeId": "no-cruelty"
+          }
+        ]
+      },
+      "no-politics": {
+        "id": "no-politics",
+        "title": "Separating symbols from systems",
+        "text": "That is fair. People often encounter the topic through identity, law, or culture. But setting that aside, there is still a practical question: if someone opposes slaughter in principle, should they also look at the industry that keeps supplying cows and calves into that outcome?",
+        "type": "question",
+        "choices": [
+          {
+            "id": "no-politics-yes",
+            "label": "Yes, the system still matters",
+            "targetNodeId": "yes-practical"
+          },
+          {
+            "id": "no-politics-no",
+            "label": "No, I only mean the symbol or politics of it",
+            "targetNodeId": "no-politics-end"
+          }
+        ]
+      },
+      "no-politics-end": {
+        "id": "no-politics-end",
+        "title": "A narrower position",
+        "text": "Then your concern may be more about identity or public symbolism than about reducing animal harm itself. That is a different conversation from trying to stop cows from entering exploitative systems.",
+        "type": "conclusion",
+        "choices": []
+      },
+      "no-cruelty": {
+        "id": "no-cruelty",
+        "title": "What follows from that?",
+        "text": "That position is at least direct. If animal suffering does not weigh much in the decision, then arguments about slaughter will probably stay unpersuasive until the moral importance of that suffering changes for you.",
+        "type": "question",
+        "choices": [
+          {
+            "id": "no-cruelty-open",
+            "label": "Still, show me the practical link",
+            "targetNodeId": "yes-demand"
+          },
+          {
+            "id": "no-cruelty-end",
+            "label": "End here",
+            "targetNodeId": "no-cruelty-end-node"
+          }
+        ]
+      },
+      "no-cruelty-end-node": {
+        "id": "no-cruelty-end-node",
+        "title": "End",
+        "text": "If cruelty is not a concern for you, this flow probably will not move much further. But if the goal ever becomes reducing harm to cows in practice, the dairy link is the place to examine.",
+        "type": "conclusion",
+        "choices": []
+      }
+    }
+  },
+  "tagIds": [],
+  "isPublished": true
+}
