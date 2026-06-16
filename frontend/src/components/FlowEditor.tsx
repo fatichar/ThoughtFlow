@@ -3,10 +3,12 @@ import {
   BackgroundVariant,
   ReactFlow,
   ReactFlowProvider,
+  applyNodeChanges,
   type Connection,
   type Edge,
   type EdgeTypes,
   type Node,
+  type NodeChange,
   type NodeTypes,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
@@ -89,6 +91,7 @@ export function FlowEditor() {
   const [draftState, setDraftState] = useState<"idle" | "saved">("idle");
   const [flowSummaries, setFlowSummaries] = useState<FlowSummary[]>([]);
   const [listState, setListState] = useState<"idle" | "loading" | "error">("idle");
+  const [canvasNodes, setCanvasNodes] = useState<Node<EditableFlowNodeData>[]>([]);
   const hasHydratedDraftRef = useRef(false);
 
   const selectedNode = flow.nodes[selectedNodeId] ?? flow.nodes[flow.startNodeId];
@@ -96,7 +99,7 @@ export function FlowEditor() {
   const positionedNodes = useMemo(() => layoutEditableFlow(flow), [flow]);
   const playSlug = flow.slug ?? slugify(flow.title || flow.id);
 
-  const nodes = useMemo<Node<EditableFlowNodeData>[]>(
+  const computedNodes = useMemo<Node<EditableFlowNodeData>[]>(
     () =>
       positionedNodes.map(({ id, position }) => {
         const node = flow.nodes[id];
@@ -150,6 +153,10 @@ export function FlowEditor() {
     persistDraft(slug, makeSaveInput(flow, slug));
     setDraftState("saved");
   }, [editorSlug, flow]);
+
+  useEffect(() => {
+    setCanvasNodes(computedNodes);
+  }, [computedNodes]);
 
   useEffect(() => {
     const syncEditorSlug = () => setEditorSlug(editorSlugFromUrl());
@@ -485,7 +492,18 @@ export function FlowEditor() {
     setSelectedNodeId(connection.source);
   }
 
+  function changeCanvasNodes(changes: NodeChange<Node<EditableFlowNodeData>>[]) {
+    setCanvasNodes((current) =>
+      applyNodeChanges<Node<EditableFlowNodeData>>(changes, current),
+    );
+  }
+
   function moveNode(_: MouseEvent, node: Node<EditableFlowNodeData>) {
+    const nextPosition = {
+      x: Math.round(node.position.x),
+      y: Math.round(node.position.y),
+    };
+
     setSaveState("idle");
     setSaveError(null);
     setFlow((current) => ({
@@ -494,10 +512,7 @@ export function FlowEditor() {
         ...current.editor,
         positions: {
           ...current.editor?.positions,
-          [node.id]: {
-            x: Math.round(node.position.x),
-            y: Math.round(node.position.y),
-          },
+          [node.id]: nextPosition,
         },
       },
     }));
@@ -649,13 +664,14 @@ export function FlowEditor() {
               fitView
               maxZoom={1.3}
               minZoom={0.32}
-              nodes={nodes}
+              nodes={canvasNodes}
               nodesConnectable
               nodesDraggable
               nodeTypes={editorNodeTypes}
               onConnect={connectChoice}
               onNodeDragStop={moveNode}
               onNodeClick={(_, node) => selectNode(node.id)}
+              onNodesChange={changeCanvasNodes}
               panOnDrag={false}
               panOnScroll
               proOptions={{ hideAttribution: true }}
