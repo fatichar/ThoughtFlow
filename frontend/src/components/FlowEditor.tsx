@@ -60,6 +60,8 @@ export function FlowEditor() {
     flowForEditorUrl(editorSlugFromUrl()),
   );
   const [availableTags, setAvailableTags] = useState<Tag[]>([]);
+  const [tagListState, setTagListState] = useState<"idle" | "error">("idle");
+  const [loadFlowState, setLoadFlowState] = useState<"idle" | "error">("idle");
   const [selectedNodeId, setSelectedNodeId] = useState(flow.startNodeId);
   const [previewStartNodeId, setPreviewStartNodeId] = useState(
     flow.startNodeId,
@@ -108,11 +110,15 @@ export function FlowEditor() {
 
   useEffect(() => {
     const controller = new AbortController();
+    setTagListState("idle");
     listTags(controller.signal)
-      .then((tags) => setAvailableTags(tags))
+      .then((tags) => {
+        setAvailableTags(tags);
+        setTagListState("idle");
+      })
       .catch((e) => {
         if (e instanceof DOMException && e.name === "AbortError") return;
-        console.error("Failed to fetch tags", e);
+        setTagListState("error");
       });
     return () => controller.abort();
   }, []);
@@ -151,6 +157,7 @@ export function FlowEditor() {
     }
 
     const controller = new AbortController();
+    setLoadFlowState("idle");
 
     fetchPublishedFlow(editorSlug, controller.signal)
       .then((publishedFlow) => {
@@ -164,11 +171,14 @@ export function FlowEditor() {
         };
 
         loadFlowIntoEditor(loadedFlow);
+        setLoadFlowState("idle");
       })
       .catch((error) => {
         if (error instanceof DOMException && error.name === "AbortError") {
           return;
         }
+
+        setLoadFlowState("error");
       });
 
     return () => controller.abort();
@@ -407,6 +417,11 @@ export function FlowEditor() {
                   )
                 }
               />
+              {tagListState === "error" ? (
+                <p className="mt-2 border border-clay/20 bg-[#fff7ea] px-2 py-2 text-xs font-bold text-clay">
+                  Could not load tags.
+                </p>
+              ) : null}
             </div>
           </div>
           <p className="mt-1 truncate text-[11px] font-bold uppercase tracking-[0.12em] text-ink/45">
@@ -419,6 +434,11 @@ export function FlowEditor() {
                 : saveState === "saved"
                   ? "Published"
                   : "Save failed"}
+            </p>
+          ) : null}
+          {loadFlowState === "error" ? (
+            <p className="mt-2 border border-clay/20 bg-[#fff7ea] px-2 py-2 text-xs font-bold text-clay">
+              Could not load this flow. You are editing a local draft.
             </p>
           ) : null}
         </div>

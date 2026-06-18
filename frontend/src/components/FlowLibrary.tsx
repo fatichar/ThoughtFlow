@@ -21,15 +21,20 @@ export function FlowLibrary({
 }: FlowLibraryProps) {
   const isEditMode = mode === "edit";
   const [availableTags, setAvailableTags] = useState<Tag[]>([]);
+  const [tagListState, setTagListState] = useState<"idle" | "error">("idle");
   const [selectedTagIds, setSelectedTagIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     const controller = new AbortController();
+    setTagListState("idle");
     listTags(controller.signal)
-      .then((tags) => setAvailableTags(tags))
+      .then((tags) => {
+        setAvailableTags(tags);
+        setTagListState("idle");
+      })
       .catch((e) => {
         if (e instanceof DOMException && e.name === "AbortError") return;
-        console.error("Failed to load tags", e);
+        setTagListState("error");
       });
     return () => controller.abort();
   }, []);
@@ -46,8 +51,13 @@ export function FlowLibrary({
 
   const filteredSummaries = flowSummaries.filter((summary) => {
     if (selectedTagIds.size === 0) return true;
-    const summaryTagIds = new Set((summary.tags || []).map((t) => t.id));
-    return Array.from(selectedTagIds).every((id) => summaryTagIds.has(id));
+    for (const id of selectedTagIds) {
+      if (!summary.tags?.some((tag) => tag.id === id)) {
+        return false;
+      }
+    }
+
+    return true;
   });
 
   return (
@@ -96,9 +106,14 @@ export function FlowLibrary({
                   </button>
                 );
               })}
-              {availableTags.length === 0 && listState !== "loading" && (
+              {availableTags.length === 0 && tagListState !== "error" && listState !== "loading" && (
                 <p className="text-sm text-ink/50 italic">No tags available.</p>
               )}
+              {tagListState === "error" ? (
+                <p className="border border-clay/20 bg-[#fff7ea] px-3 py-2 text-sm font-bold text-clay">
+                  Could not load tags.
+                </p>
+              ) : null}
             </div>
           </div>
         </aside>

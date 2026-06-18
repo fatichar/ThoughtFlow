@@ -106,7 +106,7 @@ app.MapPut("/api/flows/{slug}", async (
     }
 
     var now = DateTimeOffset.UtcNow;
-    var flowJson = JsonDocument.Parse(request.Flow.GetRawText());
+    var flowJson = JsonSerializer.SerializeToDocument(request.Flow, AppJson.Options);
     var title = string.IsNullOrWhiteSpace(request.Title) ? TitleFromSlug(slug) : request.Title.Trim();
     var description = string.IsNullOrWhiteSpace(request.Description) ? null : request.Description.Trim();
     var flow = await dbContext.Flows
@@ -170,8 +170,11 @@ app.MapPost("/api/tags", async (
         return Results.BadRequest(new ApiError("Tag name is required."));
     }
 
+    var escapedNamePattern = EscapeLikePattern(name);
     var existingTag = await dbContext.Tags
-        .FirstOrDefaultAsync(t => t.Name.ToLower() == name.ToLower(), cancellationToken);
+        .FirstOrDefaultAsync(
+            t => EF.Functions.ILike(t.Name, escapedNamePattern, @"\"),
+            cancellationToken);
 
     if (existingTag is not null)
     {
@@ -240,9 +243,7 @@ app.MapPost("/api/flows/{slug}/results", async (
     {
         Id = Guid.NewGuid(),
         FlowId = flow.Id,
-        PathJson = JsonDocument.Parse(JsonSerializer.Serialize(
-            request.Path,
-            new JsonSerializerOptions(JsonSerializerDefaults.Web))),
+        PathJson = JsonSerializer.SerializeToDocument(request.Path, AppJson.Options),
         FinalNodeId = request.FinalNodeId,
         CreatedAt = now,
         UserAgent = httpContext.Request.Headers["User-Agent"].ToString(),
@@ -320,4 +321,17 @@ static string TitleFromSlug(string slug)
         .Select(word => char.ToUpperInvariant(word[0]) + word[1..]);
 
     return string.Join(' ', words);
+}
+
+static string EscapeLikePattern(string value)
+{
+    return value
+        .Replace(@"\", @"\\")
+        .Replace("%", @"\%")
+        .Replace("_", @"\_");
+}
+
+static class AppJson
+{
+    public static readonly JsonSerializerOptions Options = new(JsonSerializerDefaults.Web);
 }
