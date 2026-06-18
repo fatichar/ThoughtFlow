@@ -6,7 +6,6 @@ import {
   CornerDownRight,
   FilePlus2,
   Plus,
-  Sparkles,
   Trash2,
 } from "lucide-react";
 import type {
@@ -25,6 +24,7 @@ export type EditableFlowNodeData = {
   onCreateConnectedNode: (nodeId: string, choiceId: string) => void;
   onDeleteChoice: (nodeId: string, choiceId: string) => void;
   onDeleteCta: (nodeId: string, index: number) => void;
+  onDeleteNode: (nodeId: string) => void;
   onSelect: (nodeId: string) => void;
   onUpdateChoice: (
     nodeId: string,
@@ -43,21 +43,18 @@ const nodeTypes: ThoughtFlowNodeType[] = [
   "question",
   "information",
   "conclusion",
-  "action",
 ];
 
 const typeLabels: Record<ThoughtFlowNode["type"], string> = {
   question: "Decision",
   information: "Information",
   conclusion: "Conclusion",
-  action: "Next steps",
 };
 
 const typeIcons: Record<ThoughtFlowNode["type"], typeof BookOpen> = {
   question: CornerDownRight,
   information: BookOpen,
   conclusion: Check,
-  action: Sparkles,
 };
 
 function EditableFlowNodeComponent({ data }: NodeProps) {
@@ -71,19 +68,30 @@ function EditableFlowNodeComponent({ data }: NodeProps) {
     onCreateConnectedNode,
     onDeleteChoice,
     onDeleteCta,
+    onDeleteNode,
     onSelect,
     onUpdateChoice,
     onUpdateCta,
     onUpdateNode,
   } = nodeData;
   const Icon = typeIcons[node.type];
-  const isAction = node.type === "action";
-  const canHaveChoices = node.type !== "action";
+  const canAddChoices = supportsBranchChoices(node.type);
+  const canHaveCtas = supportsCtas(node.type);
+  const hasLegacyChoices = !canAddChoices && node.choices.length > 0;
+  const shouldShowChoices = canAddChoices || hasLegacyChoices;
+  const choiceSectionTitle =
+    node.type === "information"
+      ? "Continue paths"
+      : hasLegacyChoices
+        ? "Existing continuations"
+        : "Choices";
+  const addChoiceLabel = node.type === "information" ? "Path" : "Choice";
 
   return (
     <article
       className={[
-        isAction ? "action-node editable-flow-node-action" : "reasoning-node",
+        "reasoning-node",
+        `editable-flow-node-${node.type}`,
         "editable-flow-node node-drag-handle",
         isSelected ? "editable-flow-node-selected" : "",
       ].join(" ")}
@@ -100,11 +108,33 @@ function EditableFlowNodeComponent({ data }: NodeProps) {
             {typeLabels[node.type]}
           </span>
         </div>
-        {isStartNode ? (
-          <span className="rounded-sm border border-moss/25 bg-leaf/15 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-moss">
-            Start
-          </span>
-        ) : null}
+        <div className="flex items-center gap-2">
+          {isStartNode ? (
+            <span className="rounded-sm border border-moss/25 bg-leaf/15 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-moss">
+              Start
+            </span>
+          ) : (
+            <button
+              className="nodrag nopan editable-node-delete-button"
+              type="button"
+              title="Delete node"
+              aria-label="Delete node"
+              onMouseDown={(event) => event.stopPropagation()}
+              onPointerDown={(event) => {
+                event.stopPropagation();
+                if (event.button === 0) {
+                  onDeleteNode(node.id);
+                }
+              }}
+              onClick={(event) => {
+                event.stopPropagation();
+                onDeleteNode(node.id);
+              }}
+            >
+              <Trash2 size={15} />
+            </button>
+          )}
+        </div>
       </div>
       <input
         aria-label="Node title"
@@ -132,14 +162,10 @@ function EditableFlowNodeComponent({ data }: NodeProps) {
           className="nodrag editable-node-select"
           value={node.type}
           onChange={(event) =>
-            onUpdateNode(node.id, {
-              type: event.target.value as ThoughtFlowNodeType,
-              choices: event.target.value === "action" ? [] : node.choices,
-              ctas:
-                event.target.value === "action"
-                  ? node.ctas ?? [{ label: "", url: "", style: "primary" }]
-                  : undefined,
-            })
+            onUpdateNode(
+              node.id,
+              nodeTypePatch(event.target.value as ThoughtFlowNodeType, node),
+            )
           }
         >
           {nodeTypes.map((type) => (
@@ -150,20 +176,22 @@ function EditableFlowNodeComponent({ data }: NodeProps) {
         </select>
       </label>
 
-      {canHaveChoices ? (
+      {shouldShowChoices ? (
         <section className="mt-5">
           <div className="mb-3 flex items-center justify-between gap-3">
             <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-moss">
-              Choices
+              {choiceSectionTitle}
             </p>
-            <button
-              className="nodrag editor-card-action"
-              type="button"
-              onClick={() => onAddChoice(node.id)}
-            >
-              <Plus size={14} />
-              Choice
-            </button>
+            {canAddChoices ? (
+              <button
+                className="nodrag editor-card-command"
+                type="button"
+                onClick={() => onAddChoice(node.id)}
+              >
+                <Plus size={14} />
+                {addChoiceLabel}
+              </button>
+            ) : null}
           </div>
           <div className="grid gap-2">
             {node.choices.map((choice) => (
@@ -207,19 +235,23 @@ function EditableFlowNodeComponent({ data }: NodeProps) {
             ))}
             {node.choices.length === 0 ? (
               <p className="rounded-sm border border-dashed border-ink/20 px-3 py-3 text-sm font-semibold text-ink/50">
-                Add a choice, then drag from its handle to another node.
+                {node.type === "information"
+                  ? "Add a continuation path, then connect it to the next card."
+                  : "Add a choice, then drag from its handle to another node."}
               </p>
             ) : null}
           </div>
         </section>
-      ) : (
+      ) : null}
+
+      {canHaveCtas ? (
         <section className="mt-5">
           <div className="mb-3 flex items-center justify-between gap-3">
             <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-clay">
               CTA buttons
             </p>
             <button
-              className="nodrag editor-card-action"
+              className="nodrag editor-card-command"
               type="button"
               onClick={() => onAddCta(node.id)}
             >
@@ -274,9 +306,30 @@ function EditableFlowNodeComponent({ data }: NodeProps) {
             ))}
           </div>
         </section>
-      )}
+      ) : null}
     </article>
   );
+}
+
+function supportsBranchChoices(type: ThoughtFlowNodeType) {
+  return type === "question" || type === "information";
+}
+
+function supportsCtas(type: ThoughtFlowNodeType) {
+  return type === "conclusion";
+}
+
+function nodeTypePatch(
+  type: ThoughtFlowNodeType,
+  node: ThoughtFlowNode,
+): Partial<ThoughtFlowNode> {
+  return {
+    type,
+    choices: supportsBranchChoices(type) ? node.choices : [],
+    ctas: supportsCtas(type)
+      ? node.ctas ?? [{ label: "", url: "", style: "primary" }]
+      : undefined,
+  };
 }
 
 export const EditableFlowNode = memo(EditableFlowNodeComponent);

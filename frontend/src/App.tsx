@@ -10,10 +10,11 @@ import {
 import { FlowEditor } from "./components/FlowEditor";
 import { FlowLibrary } from "./components/FlowLibrary";
 import { FlowPlayer } from "./components/FlowPlayer";
-import { FlowSidebar } from "./components/FlowSidebar";
 import { TopBar } from "./components/TopBar";
 import { siteName } from "./config/site";
+import { veganEthicsFlow } from "./data/veganEthicsFlow";
 import { useFlowPlayer } from "./hooks/useFlowPlayer";
+import { normalizeFlow } from "./utils/normalizeFlow";
 import { shareFlowUrl } from "./utils/shareFlow";
 
 const fallbackSlug = "is-taste-enough";
@@ -81,10 +82,30 @@ function PlayerApp() {
 
     fetchPublishedFlow(slug, controller.signal)
       .then((flow) => {
-        setPublishedFlow(flow);
+        setPublishedFlow({
+          ...flow,
+          flow: normalizeFlow(flow.flow),
+        });
         setLoadState("ready");
       })
       .catch(() => {
+        if (slug === fallbackSlug) {
+          const fallbackFlow = normalizeFlow({
+            ...veganEthicsFlow,
+            slug: fallbackSlug,
+          });
+          setPublishedFlow({
+            id: fallbackFlow.id,
+            slug: fallbackSlug,
+            title: fallbackFlow.title,
+            description: fallbackFlow.description,
+            flow: fallbackFlow,
+            tags: fallbackFlow.tags ?? [],
+          });
+          setLoadState("ready");
+          return;
+        }
+
         setLoadState("error");
       });
 
@@ -151,24 +172,25 @@ function PlayableFlow({
   onSubmitError,
   onResetCompletion,
 }: PlayableFlowProps) {
-  const [attemptedActionNodeId, setAttemptedActionNodeId] = useState<string | null>(
+  const [attemptedCompletionNodeId, setAttemptedCompletionNodeId] = useState<string | null>(
     null,
   );
-  const submittedActionNodeRef = useRef<string | null>(null);
+  const submittedCompletionNodeRef = useRef<string | null>(null);
   const player = useFlowPlayer(publishedFlow.flow);
   const currentNode = publishedFlow.flow.nodes[player.currentNodeId];
-  const isActionNode = currentNode.type === "action";
+  const isCtaNode = currentNode.type === "conclusion";
+  const hasValidCtas =
+    currentNode.ctas?.some((cta) => cta.label.trim() && cta.url.trim()) ?? false;
   const isTerminalNode =
-    isActionNode ||
-    (currentNode.type !== "action" && currentNode.choices.length === 0);
+    isCtaNode || (!isCtaNode && currentNode.choices.length === 0);
 
   async function handleSubmit() {
-    if (submittedActionNodeRef.current === player.currentNodeId) {
+    if (submittedCompletionNodeRef.current === player.currentNodeId) {
       return;
     }
 
-    submittedActionNodeRef.current = player.currentNodeId;
-    setAttemptedActionNodeId(player.currentNodeId);
+    submittedCompletionNodeRef.current = player.currentNodeId;
+    setAttemptedCompletionNodeId(player.currentNodeId);
     onSubmitStart();
 
     try {
@@ -184,18 +206,18 @@ function PlayableFlow({
 
   useEffect(() => {
     if (
-      isActionNode &&
-      (currentNode.ctas?.some((cta) => cta.label.trim() && cta.url.trim()) ?? false) &&
-      attemptedActionNodeId !== player.currentNodeId &&
+      isCtaNode &&
+      hasValidCtas &&
+      attemptedCompletionNodeId !== player.currentNodeId &&
       !isSubmitted &&
       !isSubmitting
     ) {
       void handleSubmit();
     }
   }, [
-    attemptedActionNodeId,
-    currentNode.ctas,
-    isActionNode,
+    attemptedCompletionNodeId,
+    hasValidCtas,
+    isCtaNode,
     isSubmitted,
     isSubmitting,
     player.currentNodeId,
@@ -208,12 +230,12 @@ function PlayableFlow({
           flow={publishedFlow.flow}
           onReset={() => {
             player.reset();
-            setAttemptedActionNodeId(null);
-            submittedActionNodeRef.current = null;
+            setAttemptedCompletionNodeId(null);
+            submittedCompletionNodeRef.current = null;
             onResetCompletion();
           }}
         />
-        <main className="relative grid h-[calc(100vh-64px)] grid-cols-[minmax(0,1fr)_360px] max-[980px]:grid-cols-1">
+        <main className="relative h-[calc(100vh-64px)]">
           <FlowPlayer
             flow={publishedFlow.flow}
             isCompletionSaved={isSubmitted}
@@ -231,13 +253,12 @@ function PlayableFlow({
             }}
             onRestart={() => {
               player.reset();
-              setAttemptedActionNodeId(null);
-              submittedActionNodeRef.current = null;
+              setAttemptedCompletionNodeId(null);
+              submittedCompletionNodeRef.current = null;
               onResetCompletion();
             }}
             player={player}
           />
-          <FlowSidebar flow={publishedFlow.flow} player={player} />
           {submitError ? (
             <div className="absolute bottom-5 left-5 z-20 max-w-md border border-clay/25 bg-[#fffdf7]/95 px-4 py-3 text-sm font-bold text-clay shadow-node">
               {submitError}

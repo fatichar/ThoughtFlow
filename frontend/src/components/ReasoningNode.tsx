@@ -1,15 +1,14 @@
-import { memo, useState } from "react";
+import { memo, useState, type ReactNode } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
 import { motion } from "framer-motion";
 import {
   ArrowUpRight,
   BookOpen,
   Check,
-  CornerDownRight,
+  Heart,
   RotateCcw,
   Send,
   Share2,
-  Sparkles,
 } from "lucide-react";
 import type { ThoughtFlowChoice, ThoughtFlowNode } from "../types/flow";
 
@@ -29,14 +28,12 @@ const typeLabels: Record<ThoughtFlowNode["type"], string> = {
   question: "Decision",
   information: "Information",
   conclusion: "Conclusion",
-  action: "Next steps",
 };
 
 const typeIcons: Record<ThoughtFlowNode["type"], typeof BookOpen> = {
-  question: CornerDownRight,
+  question: Share2,
   information: BookOpen,
   conclusion: Check,
-  action: Sparkles,
 };
 
 function ReasoningNodeComponent({ data }: NodeProps) {
@@ -53,11 +50,7 @@ function ReasoningNodeComponent({ data }: NodeProps) {
     state,
   } = nodeData;
   const isCurrent = state === "current";
-  const Icon = typeIcons[node.type];
-  const isAction = node.type === "action";
-  const isConclusion = node.type === "conclusion";
   const validCtas = node.ctas?.filter((cta) => cta.label.trim() && cta.url.trim()) ?? [];
-  const isTerminalNode = isAction ? validCtas.length === 0 : node.choices.length === 0;
   const [shareState, setShareState] = useState<"idle" | "copied" | "error">("idle");
 
   async function handleShareCta() {
@@ -75,158 +68,274 @@ function ReasoningNodeComponent({ data }: NodeProps) {
     }
   }
 
+  if (node.type === "question") {
+    return (
+      <PlayerMotionShell state={state} className="player-node-decision-shell">
+        <QuestionNodeCard
+          node={node}
+          selectedChoiceId={selectedChoiceId}
+          onChoose={onChoose}
+        />
+      </PlayerMotionShell>
+    );
+  }
+
+  if (node.type === "information") {
+    return (
+      <PlayerMotionShell state={state} className="player-node-info-shell">
+        <InfoNode
+          node={node}
+          selectedChoiceId={selectedChoiceId}
+          onChoose={onChoose}
+        />
+      </PlayerMotionShell>
+    );
+  }
+
+  return (
+    <PlayerMotionShell state={state} className="player-node-conclusion-shell">
+      <ConclusionNode
+        isCompletionSaved={isCompletionSaved}
+        isCurrent={isCurrent}
+        isSavingCompletion={isSavingCompletion}
+        node={node}
+        onRestart={onRestart}
+        onShare={() => void handleShareCta()}
+        onSubmitCompletion={onSubmitCompletion}
+        shareState={shareState}
+        validCtas={validCtas}
+      />
+    </PlayerMotionShell>
+  );
+}
+
+function PlayerMotionShell({
+  children,
+  className,
+  state,
+}: {
+  children: ReactNode;
+  className: string;
+  state: "current" | "visited";
+}) {
+  const isCurrent = state === "current";
+
   return (
     <motion.article
-      initial={{ opacity: 0, y: 18, scale: 0.94 }}
+      initial={{ opacity: 0, y: 16, scale: 0.96 }}
       animate={{
-        opacity: isCurrent ? 1 : 0.78,
+        opacity: isCurrent ? 1 : 0.88,
         y: 0,
-        scale: isCurrent ? 1 : 0.88,
+        scale: isCurrent ? 1 : 0.94,
       }}
-      transition={{ type: "spring", stiffness: 260, damping: 25 }}
-      className={[
-        isAction ? "action-node" : "reasoning-node",
-        isCurrent ? "reasoning-node-current" : "reasoning-node-visited",
-      ].join(" ")}
+      transition={{ type: "spring", stiffness: 260, damping: 26 }}
+      className={["player-node-shell", className].join(" ")}
     >
-      <Handle className="flow-handle" position={Position.Left} type="target" />
-      <div className="mb-4 flex items-start justify-between gap-4">
-        <div className="flex items-center gap-2">
-          <span className="grid h-8 w-8 place-items-center rounded-sm bg-moss text-canvas">
-            <Icon size={16} />
-          </span>
-          <span className="text-xs font-extrabold uppercase tracking-[0.2em] text-moss">
-            {typeLabels[node.type]}
-          </span>
-        </div>
-        {isAction || isTerminalNode ? (
-          <span className="rounded-sm border border-clay/25 bg-clay/10 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-clay">
-            {isCompletionSaved
-              ? "Saved"
-              : isSavingCompletion
-                ? "Saving"
-                : "Completion"}
-          </span>
-        ) : null}
-      </div>
+      {children}
+    </motion.article>
+  );
+}
 
-      <h2 className="font-display text-[28px] leading-none text-ink">
-        {node.title}
-      </h2>
-      {node.text.trim() ? (
-        <p className="mt-3 text-[15px] leading-6 text-ink/75">{node.text}</p>
+function QuestionNodeCard({
+  node,
+  onChoose,
+  selectedChoiceId,
+}: {
+  node: ThoughtFlowNode;
+  onChoose: (fromNodeId: string, choice: ThoughtFlowChoice) => void;
+  selectedChoiceId?: string;
+}) {
+  return (
+    <div className="player-question-card">
+      <Handle className="player-target-handle" position={Position.Left} type="target" />
+      <Handle className="player-node-source-handle" position={Position.Right} type="source" />
+      <NodeKicker node={node} />
+      <h2>{node.title}</h2>
+      {node.text.trim() ? <p>{node.text}</p> : null}
+      <PlayerChoiceButtons
+        choices={node.choices}
+        nodeId={node.id}
+        onChoose={onChoose}
+        selectedChoiceId={selectedChoiceId}
+        variant="decision"
+      />
+    </div>
+  );
+}
+
+function InfoNode({
+  node,
+  onChoose,
+  selectedChoiceId,
+}: {
+  node: ThoughtFlowNode;
+  onChoose: (fromNodeId: string, choice: ThoughtFlowChoice) => void;
+  selectedChoiceId?: string;
+}) {
+  return (
+    <div className="player-info-card">
+      <Handle className="player-target-handle" position={Position.Left} type="target" />
+      <Handle className="player-node-source-handle" position={Position.Right} type="source" />
+      <NodeKicker node={node} />
+      <h2>{node.title}</h2>
+      {node.text.trim() ? <p>{node.text}</p> : null}
+      <PlayerChoiceButtons
+        choices={node.choices}
+        nodeId={node.id}
+        onChoose={onChoose}
+        selectedChoiceId={selectedChoiceId}
+        variant="info"
+      />
+    </div>
+  );
+}
+
+function ConclusionNode({
+  isCompletionSaved,
+  isCurrent,
+  isSavingCompletion,
+  node,
+  onRestart,
+  onShare,
+  onSubmitCompletion,
+  shareState,
+  validCtas,
+}: {
+  isCompletionSaved: boolean;
+  isCurrent: boolean;
+  isSavingCompletion: boolean;
+  node: ThoughtFlowNode;
+  onRestart: () => void;
+  onShare: () => void;
+  onSubmitCompletion: () => void;
+  shareState: "idle" | "copied" | "error";
+  validCtas: NonNullable<ThoughtFlowNode["ctas"]>;
+}) {
+  return (
+    <div className="player-conclusion-card">
+      <Handle className="player-target-handle" position={Position.Left} type="target" />
+      <div className="player-conclusion-header">
+        <NodeKicker node={node} />
+        <span className="player-status-badge">
+          {isCompletionSaved ? "Saved" : isSavingCompletion ? "Saving" : "Completion"}
+        </span>
+      </div>
+      <h2>{node.title}</h2>
+      {node.text.trim() ? <p>{node.text}</p> : null}
+
+      {validCtas.length > 0 ? (
+        <CtaLinks ctas={validCtas} />
+      ) : isCurrent ? (
+        <button
+          className="player-submit-button"
+          type="button"
+          onClick={onSubmitCompletion}
+          disabled={isSavingCompletion || isCompletionSaved}
+        >
+          <span>
+            {isCompletionSaved
+              ? "Response saved"
+              : isSavingCompletion
+                ? "Saving response"
+                : "Submit response"}
+          </span>
+          <Send size={16} />
+        </button>
       ) : null}
 
-      {isAction ? (
-        <div className="mt-6">
-          {validCtas.length > 0 ? (
-            <>
-              <p className="mb-3 text-xs font-extrabold uppercase tracking-[0.18em] text-clay">
-                Related links
-              </p>
-              <div className="grid gap-2">
-                {validCtas.map((cta) => {
-                  const isExternal = /^https?:\/\//i.test(cta.url);
-                  const className = [
-                    "flex min-h-12 items-center justify-between gap-3 rounded-sm border px-4 py-3 text-sm font-extrabold transition hover:-translate-y-0.5",
-                    cta.style === "primary"
-                      ? "border-ink bg-ink text-canvas hover:bg-moss"
-                      : "border-ink/10 bg-white/55 text-ink hover:border-moss/45 hover:text-moss",
-                  ].join(" ");
+      <EndingControls onRestart={onRestart} onShare={onShare} shareState={shareState} />
+    </div>
+  );
+}
 
-                  return (
-                    <a
-                      className={className}
-                      href={cta.url}
-                      key={`${cta.label}-${cta.url}`}
-                      rel={isExternal ? "noreferrer" : undefined}
-                      target={isExternal ? "_blank" : undefined}
-                    >
-                      <span>{cta.label}</span>
-                      <ArrowUpRight size={17} />
-                    </a>
-                  );
-                })}
-              </div>
-            </>
-          ) : null}
-          {validCtas.length === 0 ? (
-            <button
-              className="choice-button choice-button-selected mt-4"
-              type="button"
-              onClick={onSubmitCompletion}
-              disabled={isSavingCompletion || isCompletionSaved}
-            >
-              <span>
-                {isCompletionSaved
-                  ? "Response saved"
-                  : isSavingCompletion
-                    ? "Saving response"
-                    : "Submit response"}
-              </span>
-              <Send size={16} />
-            </button>
-          ) : null}
-          <EndingControls
-            onRestart={onRestart}
-            onShare={() => void handleShareCta()}
-            shareState={shareState}
-          />
-        </div>
-      ) : (
-        <div className="mt-5 space-y-2">
-          {node.choices.length > 0 ? (
-            node.choices.map((choice) => {
-              const isSelected = selectedChoiceId === choice.id;
-              const isSoftened = Boolean(selectedChoiceId && !isSelected);
+function NodeKicker({ node }: { node: ThoughtFlowNode }) {
+  const Icon = typeIcons[node.type];
 
-              return (
-                <button
-                  className={[
-                    "choice-button",
-                    isSelected ? "choice-button-selected" : "",
-                    isSoftened ? "choice-button-soft" : "",
-                  ].join(" ")}
-                  key={choice.id}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    onChoose(node.id, choice);
-                  }}
-                  type="button"
-                >
-                  <span>{choice.label}</span>
-                  <CornerDownRight size={16} />
-                </button>
-              );
-            })
-          ) : isCurrent ? (
-            <button
-              className="choice-button choice-button-selected"
-              type="button"
-              onClick={onSubmitCompletion}
-              disabled={isSavingCompletion || isCompletionSaved}
+  return (
+    <div className={["player-node-kicker", `player-node-kicker-${node.type}`].join(" ")}>
+      <span>
+        <Icon size={18} />
+      </span>
+      <strong>{typeLabels[node.type]}</strong>
+    </div>
+  );
+}
+
+function PlayerChoiceButtons({
+  choices,
+  nodeId,
+  onChoose,
+  selectedChoiceId,
+  variant,
+}: {
+  choices: ThoughtFlowChoice[];
+  nodeId: string;
+  onChoose: (fromNodeId: string, choice: ThoughtFlowChoice) => void;
+  selectedChoiceId?: string;
+  variant: "decision" | "info";
+}) {
+  if (choices.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className={`player-choice-buttons player-choice-buttons-${variant}`}>
+      {choices.map((choice) => {
+        const isSelected = selectedChoiceId === choice.id;
+        const label = variant === "info" && choices.length === 1 ? "Go" : choice.label;
+
+        return (
+          <button
+            aria-pressed={isSelected}
+            className={[
+              "player-choice-button",
+              `player-choice-button-${variant}`,
+              isSelected ? "player-choice-button-selected" : "",
+            ].join(" ")}
+            key={choice.id}
+            onClick={(event) => {
+              event.stopPropagation();
+              onChoose(nodeId, choice);
+            }}
+            type="button"
+          >
+            <span>{label}</span>
+            <ArrowUpRight size={16} />
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function CtaLinks({ ctas }: { ctas: NonNullable<ThoughtFlowNode["ctas"]> }) {
+  return (
+    <section className="player-cta-section">
+      <p>Related links</p>
+      <div>
+        {ctas.map((cta, index) => {
+          const href = normalizeCtaHref(cta.url);
+          const isExternal = /^https?:\/\//i.test(href);
+          const Icon = index % 2 === 0 ? BookOpen : Heart;
+
+          return (
+            <a
+              className="player-cta-link"
+              href={href}
+              key={`${cta.label}-${cta.url}`}
+              rel={isExternal ? "noreferrer" : undefined}
+              target={isExternal ? "_blank" : undefined}
             >
-              <span>
-                {isCompletionSaved
-                  ? "Response saved"
-                  : isSavingCompletion
-                    ? "Saving response"
-                    : "Submit response"}
+              <span className="player-cta-icon">
+                <Icon size={18} />
               </span>
-              <Send size={16} />
-            </button>
-          ) : null}
-          {isConclusion ? (
-            <EndingControls
-              onRestart={onRestart}
-              onShare={() => void handleShareCta()}
-              shareState={shareState}
-            />
-          ) : null}
-        </div>
-      )}
-      <Handle className="flow-handle" position={Position.Right} type="source" />
-    </motion.article>
+              <strong>{cta.label}</strong>
+              <ArrowUpRight size={19} />
+            </a>
+          );
+        })}
+      </div>
+    </section>
   );
 }
 
@@ -240,8 +349,9 @@ function EndingControls({
   shareState: "idle" | "copied" | "error";
 }) {
   return (
-    <div className="mt-4 grid grid-cols-2 gap-2">
-      <button className="choice-button" type="button" onClick={onShare}>
+    <div className="player-ending-controls">
+      <button type="button" onClick={onShare}>
+        <Share2 size={18} />
         <span>
           {shareState === "copied"
             ? "Copied link"
@@ -249,14 +359,23 @@ function EndingControls({
               ? "Could not share"
               : "Share flow"}
         </span>
-        <Share2 size={16} />
       </button>
-      <button className="choice-button" type="button" onClick={onRestart}>
+      <button type="button" onClick={onRestart}>
+        <RotateCcw size={18} />
         <span>Restart flow</span>
-        <RotateCcw size={16} />
       </button>
     </div>
   );
+}
+
+function normalizeCtaHref(url: string) {
+  const value = url.trim();
+
+  if (/^(https?:|mailto:|tel:|#|\/)/i.test(value)) {
+    return value;
+  }
+
+  return `https://${value}`;
 }
 
 export const ReasoningNode = memo(ReasoningNodeComponent);

@@ -7,7 +7,7 @@
 :root {
   color-scheme: light;
   font-family: "Manrope", ui-sans-serif, system-ui, sans-serif;
-  background: #f4f1e8;
+  background: #eef3ea;
 }
 
 * {
@@ -25,17 +25,12 @@ button {
 }
 
 .icon-button {
-  @apply grid h-10 w-10 place-items-center rounded-sm border border-ink/10 bg-white/45 text-ink transition duration-200 hover:-translate-y-0.5 hover:border-moss/40 hover:bg-white hover:text-moss;
+  @apply grid h-10 w-10 place-items-center rounded-sm border border-ink/10 bg-white/75 text-ink transition duration-200 hover:-translate-y-0.5 hover:border-moss/40 hover:bg-white hover:text-moss disabled:cursor-default disabled:opacity-40 disabled:hover:translate-y-0;
 }
 
 .reasoning-node {
-  @apply w-[360px] border bg-[#fffdf7] p-5 text-left shadow-node transition-colors duration-300;
+  @apply w-[360px] border border-ink/10 bg-[#fffefa] p-5 text-left shadow-node transition-colors duration-300;
   border-radius: 6px;
-}
-
-.action-node {
-  @apply w-[430px] border bg-[#fffaf1] p-6 text-left shadow-active transition-colors duration-300;
-  border-radius: 8px;
 }
 
 .reasoning-node-current {
@@ -53,12 +48,12 @@ button {
 }
 
 .reasoning-node-visited {
-  @apply bg-[#f9f3e4];
+  @apply bg-[#f7f9f3];
   border-color: rgba(35, 37, 34, 0.12);
 }
 
 .choice-button {
-  @apply flex min-h-12 w-full items-center justify-between gap-3 rounded-sm border border-ink/10 bg-[#f7f1e3] px-4 py-3 text-left text-sm font-extrabold leading-5 text-ink transition duration-200 hover:-translate-y-0.5 hover:border-moss/50 hover:bg-white hover:text-moss disabled:cursor-default disabled:hover:translate-y-0;
+  @apply flex min-h-12 w-full items-center justify-between gap-3 rounded-sm border border-ink/10 bg-[#eef4e8] px-4 py-3 text-left text-sm font-extrabold leading-5 text-ink transition duration-200 hover:-translate-y-0.5 hover:border-moss/50 hover:bg-white hover:text-moss disabled:cursor-default disabled:hover:translate-y-0;
 }
 
 .choice-button-selected {
@@ -74,15 +69,15 @@ button {
 }
 
 .editor-input {
-  @apply mt-2 block w-full rounded-sm border border-ink/10 bg-white/70 px-3 py-2 text-sm font-bold normal-case tracking-normal text-ink outline-none transition focus:border-moss focus:bg-white;
+  @apply mt-2 block w-full rounded-sm border border-ink/10 bg-white/80 px-3 py-2 text-sm font-bold normal-case tracking-normal text-ink outline-none transition focus:border-moss focus:bg-white;
 }
 
 .editor-small-button {
-  @apply inline-flex min-h-9 items-center gap-2 rounded-sm border border-ink/10 bg-white/60 px-3 py-2 text-xs font-extrabold uppercase tracking-[0.12em] text-ink transition hover:-translate-y-0.5 hover:border-moss/40 hover:bg-white hover:text-moss;
+  @apply inline-flex min-h-9 items-center gap-2 rounded-sm border border-ink/10 bg-white/75 px-3 py-2 text-xs font-extrabold uppercase tracking-[0.12em] text-ink transition hover:-translate-y-0.5 hover:border-moss/40 hover:bg-white hover:text-moss disabled:cursor-default disabled:opacity-45 disabled:hover:translate-y-0;
 }
 
 .editor-toolbar-button {
-  @apply inline-flex min-h-10 items-center gap-2 rounded-sm border border-ink/10 bg-white/60 px-3 py-2 text-xs font-extrabold uppercase tracking-[0.12em] text-ink transition hover:-translate-y-0.5 hover:border-moss/40 hover:bg-white hover:text-moss disabled:cursor-default disabled:opacity-55 disabled:hover:translate-y-0;
+  @apply inline-flex min-h-10 items-center gap-2 rounded-sm border border-ink/10 bg-white/75 px-3 py-2 text-xs font-extrabold uppercase tracking-[0.12em] text-ink transition hover:-translate-y-0.5 hover:border-moss/40 hover:bg-white hover:text-moss disabled:cursor-default disabled:opacity-55 disabled:hover:translate-y-0;
 }
 
 .editor-toolbar-button-primary {
@@ -111,8 +106,23 @@ button {
   background: rgba(126, 160, 90, 0.08);
 }
 
-.editable-flow-node-action {
-  @apply bg-[#fffaf1];
+.editable-flow-node-question,
+.reasoning-node-question {
+  border-top: 4px solid #2f6b56;
+}
+
+.editable-flow-node-information,
+.reasoning-node-information {
+  border-top: 4px solid #4b7fb5;
+}
+
+.editable-flow-node-conclusion,
+.reasoning-node-conclusion {
+  border-top: 4px solid #7b61b8;
+}
+
+.editable-node-delete-button {
+  @apply grid h-8 w-8 place-items-center rounded-sm border border-clay/20 bg-clay/10 text-clay transition hover:-translate-y-0.5 hover:bg-clay hover:text-white;
 }
 
 .editable-node-title {
@@ -124,15 +134,15 @@ button {
 }
 
 .editable-node-select {
-  @apply mt-2 block w-full rounded-sm border border-ink/10 bg-white/70 px-3 py-2 text-sm font-bold normal-case tracking-normal text-ink outline-none transition focus:border-moss focus:bg-white;
+  @apply mt-2 block w-full rounded-sm border border-ink/10 bg-white/80 px-3 py-2 text-sm font-bold normal-case tracking-normal text-ink outline-none transition focus:border-moss focus:bg-white;
 }
 
-.editor-card-action {
-  @apply inline-flex min-h-8 items-center gap-1 rounded-sm border border-ink/10 bg-white/55 px-2 py-1 text-[10px] font-extrabold uppercase tracking-[0.12em] text-ink transition hover:border-moss/40 hover:bg-white hover:text-moss;
+.editor-card-command {
+  @apply inline-flex min-h-8 items-center gap-1 rounded-sm border border-ink/10 bg-white/75 px-2 py-1 text-[10px] font-extrabold uppercase tracking-[0.12em] text-ink transition hover:border-moss/40 hover:bg-white hover:text-moss;
 }
 
 .editable-choice-row {
-  @apply relative grid min-h-12 grid-cols-[1fr_auto_auto] items-center gap-2 rounded-sm border border-ink/10 bg-[#f7f1e3] px-3 py-2 transition hover:border-moss/45 hover:bg-white;
+  @apply relative grid min-h-12 grid-cols-[1fr_auto_auto] items-center gap-2 rounded-sm border border-ink/10 bg-[#eef4e8] px-3 py-2 transition hover:border-moss/45 hover:bg-white;
 }
 
 .editable-choice-input {
@@ -144,7 +154,7 @@ button {
 }
 
 .editable-cta-row {
-  @apply grid gap-2 rounded-sm border border-clay/15 bg-[#fff7ea] p-3;
+  @apply grid gap-2 rounded-sm border border-clay/20 bg-[#fff3e3] p-3;
 }
 
 .editor-choice-handle {
@@ -179,7 +189,7 @@ button {
 }
 
 .edge-path {
-  stroke: #536b4f;
+  stroke: #2f6b56;
   stroke-width: 3;
   stroke-linecap: round;
   fill: none;
@@ -187,11 +197,366 @@ button {
 }
 
 .edge-path-active {
-  stroke: #b15f43;
+  stroke: #d65d3f;
   opacity: 1;
   stroke-dasharray: 700;
   stroke-dashoffset: 700;
   animation: draw-edge 760ms ease-out forwards, edge-pulse 1.2s ease-out 760ms;
+}
+
+.player-flow-canvas {
+  background: #5f5e5e;
+}
+
+.player-flow-canvas .react-flow__node-reasoning {
+  overflow: visible;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  visibility: visible !important;
+  z-index: 4 !important;
+}
+
+.player-flow-canvas .react-flow__handle {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.player-node-shell {
+  position: relative;
+  overflow: visible;
+  color: #172033;
+  font-family: "Manrope", ui-sans-serif, system-ui, sans-serif;
+}
+
+.player-node-shell h2 {
+  margin: 0;
+  max-width: 100%;
+  color: #111b2e;
+  font-family: "Fraunces", Georgia, serif;
+  font-size: 33px;
+  line-height: 1.05;
+  letter-spacing: 0;
+}
+
+.player-node-shell p {
+  margin: 14px 0 0;
+  max-width: 31rem;
+  color: rgba(23, 32, 51, 0.66);
+  font-size: 15px;
+  font-weight: 650;
+  line-height: 1.55;
+}
+
+.player-node-kicker {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 28px;
+}
+
+.player-node-kicker span {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  place-items: center;
+  border-radius: 999px;
+}
+
+.player-node-kicker strong {
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.player-node-kicker-question span {
+  background: rgba(251, 146, 60, 0.15);
+  color: #e9782d;
+}
+
+.player-node-kicker-question strong {
+  color: #e9782d;
+}
+
+.player-node-kicker-information span {
+  background: rgba(47, 120, 255, 0.1);
+  color: #2f78ff;
+}
+
+.player-node-kicker-information strong {
+  color: #2f78ff;
+}
+
+.player-node-kicker-conclusion span {
+  background: rgba(139, 92, 246, 0.12);
+  color: #8b5cf6;
+}
+
+.player-node-kicker-conclusion strong {
+  color: #8b5cf6;
+}
+
+.player-question-card,
+.player-info-card,
+.player-conclusion-card {
+  position: relative;
+  overflow: visible;
+  border: 1.5px solid;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 24px 54px rgba(30, 41, 59, 0.1);
+}
+
+.player-question-card {
+  width: 410px;
+  min-height: 280px;
+  padding: 40px 34px 34px;
+  border-color: rgba(251, 146, 60, 0.48);
+  border-top: 4px solid #f59e5b;
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at 22% 30%, rgba(251, 146, 60, 0.12), transparent 46%),
+    rgba(255, 250, 244, 0.95);
+  box-shadow: 0 24px 54px rgba(174, 93, 36, 0.13);
+}
+
+.player-info-card {
+  width: 390px;
+  min-height: 260px;
+  padding: 40px 34px 34px;
+  border-color: rgba(47, 120, 255, 0.48);
+  border-radius: 18px;
+}
+
+.player-conclusion-card {
+  width: 520px;
+  min-height: 360px;
+  padding: 34px 32px 32px;
+  border-color: rgba(139, 92, 246, 0.18);
+  border-top: 5px solid #8b5cf6;
+  border-radius: 18px;
+}
+
+.player-conclusion-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.player-status-badge {
+  border: 1px solid rgba(240, 100, 67, 0.28);
+  border-radius: 4px;
+  background: rgba(240, 100, 67, 0.08);
+  padding: 9px 12px;
+  color: #f06443;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.player-choice-buttons {
+  display: grid;
+  gap: 10px;
+  margin-top: 26px;
+}
+
+.player-choice-button {
+  display: flex;
+  min-height: 48px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  border: 1px solid;
+  border-radius: 8px;
+  cursor: pointer;
+  padding: 0 16px;
+  color: #172033;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.2;
+  text-align: left;
+  transition: transform 180ms ease, background 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.player-choice-button span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.player-choice-button-decision {
+  border-color: rgba(245, 158, 91, 0.36);
+  background: rgba(255, 246, 235, 0.82);
+  box-shadow: 0 10px 20px rgba(174, 93, 36, 0.08);
+}
+
+.player-choice-button-info {
+  border-color: rgba(47, 120, 255, 0.26);
+  background: rgba(239, 246, 255, 0.74);
+  box-shadow: 0 10px 20px rgba(47, 120, 255, 0.07);
+}
+
+.player-choice-button:hover {
+  transform: translateY(-1px);
+  background: #ffffff;
+}
+
+.player-choice-button:active {
+  transform: translateY(0) scale(0.99);
+}
+
+.player-choice-button:focus-visible {
+  outline: 3px solid rgba(240, 100, 67, 0.32);
+  outline-offset: 4px;
+}
+
+.player-choice-button-selected.player-choice-button-decision {
+  border-color: rgba(245, 158, 91, 0.72);
+  background: rgba(255, 235, 214, 0.95);
+}
+
+.player-choice-button-selected.player-choice-button-info {
+  border-color: rgba(47, 120, 255, 0.58);
+  background: rgba(225, 239, 255, 0.94);
+}
+
+.player-target-handle {
+  left: 0 !important;
+  width: 10px !important;
+  height: 10px !important;
+  border: 0 !important;
+  background: transparent !important;
+}
+
+.player-node-source-handle {
+  right: 0 !important;
+  width: 10px !important;
+  height: 10px !important;
+  border: 0 !important;
+  background: transparent !important;
+}
+
+.player-edge {
+  pointer-events: none;
+}
+
+.player-edge-halo {
+  opacity: 0.13;
+  stroke-width: 13;
+}
+
+.player-edge-path {
+  opacity: 0.92;
+  stroke-width: 3.2;
+  filter: drop-shadow(0 2px 4px rgba(30, 41, 59, 0.12));
+}
+
+.player-edge-active .player-edge-path {
+  stroke-dasharray: 760;
+  stroke-dashoffset: 760;
+  animation: player-draw-edge 720ms ease-out forwards;
+}
+
+.player-cta-section {
+  margin-top: 30px;
+}
+
+.player-cta-section > p {
+  margin: 0 0 14px;
+  color: #f06443;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
+.player-cta-section > div {
+  overflow: hidden;
+  border: 1px solid rgba(23, 32, 51, 0.12);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.74);
+}
+
+.player-cta-link {
+  display: grid;
+  min-height: 68px;
+  grid-template-columns: 42px 1fr auto;
+  align-items: center;
+  gap: 18px;
+  border-bottom: 1px solid rgba(23, 32, 51, 0.1);
+  padding: 0 22px;
+  color: #172033;
+  font-size: 16px;
+  font-weight: 800;
+  text-decoration: none;
+  transition: background 180ms ease, color 180ms ease;
+}
+
+.player-cta-link:last-child {
+  border-bottom: 0;
+}
+
+.player-cta-link:hover {
+  background: rgba(139, 92, 246, 0.07);
+  color: #6f43e7;
+}
+
+.player-cta-icon {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border-radius: 4px;
+  background: rgba(139, 92, 246, 0.08);
+  color: #8b5cf6;
+}
+
+.player-ending-controls {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 28px;
+}
+
+.player-ending-controls button,
+.player-submit-button {
+  display: inline-flex;
+  min-height: 58px;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  border: 1px solid rgba(139, 92, 246, 0.15);
+  border-radius: 6px;
+  background: rgba(139, 92, 246, 0.07);
+  color: #172033;
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 800;
+  transition: transform 180ms ease, background 180ms ease, border-color 180ms ease;
+}
+
+.player-ending-controls button:hover,
+.player-submit-button:hover {
+  transform: translateY(-2px);
+  border-color: rgba(139, 92, 246, 0.28);
+  background: rgba(139, 92, 246, 0.12);
+}
+
+.player-submit-button {
+  width: 100%;
+  margin-top: 28px;
+}
+
+.player-submit-button:disabled {
+  cursor: default;
+  opacity: 0.62;
+}
+
+@keyframes player-draw-edge {
+  to {
+    stroke-dashoffset: 0;
+  }
 }
 
 @keyframes draw-edge {

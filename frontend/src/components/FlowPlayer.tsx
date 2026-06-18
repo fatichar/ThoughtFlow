@@ -97,10 +97,13 @@ export function FlowPlayer({
           source: choice.fromNodeId,
           target: choice.targetNodeId,
           type: "animated",
-          data: { active: id === player.activeEdgeId },
+          data: {
+            active: id === player.activeEdgeId,
+            sourceType: flow.nodes[choice.fromNodeId]?.type,
+          },
         };
       }),
-    [player.activeEdgeId, player.selectedChoices],
+    [flow.nodes, player.activeEdgeId, player.selectedChoices],
   );
 
   useEffect(() => {
@@ -110,24 +113,22 @@ export function FlowPlayer({
     }
 
     window.setTimeout(() => {
-      setCenter(target.position.x + 180, target.position.y + 145, {
+      const targetNode = flow.nodes[target.id];
+      const offsetX = targetNode?.type === "conclusion" ? 270 : 210;
+      const offsetY = targetNode?.type === "question" ? 160 : 145;
+      setCenter(target.position.x + offsetX, target.position.y + offsetY, {
         duration: 720,
-        zoom: 1.02,
+        zoom: 0.86,
       });
-    }, 80);
-  }, [player.currentNodeId, positionedNodes, setCenter]);
+    }, 180);
+  }, [flow.nodes, player.currentNodeId, positionedNodes, setCenter]);
 
   useEffect(() => {
     window.setTimeout(() => fitView({ duration: 400, maxZoom: 1.05 }), 100);
   }, [fitView]);
 
   return (
-    <section className="relative h-full min-h-0 overflow-hidden border-r border-ink/10 max-[980px]:h-[68vh] max-[980px]:border-r-0">
-      <div className="pointer-events-none absolute left-6 top-6 z-10 max-w-sm">
-        <p className="rounded-sm border border-ink/10 bg-[#f9f6ed]/80 px-3 py-2 text-xs font-bold uppercase tracking-[0.18em] text-moss shadow-sm backdrop-blur">
-          Play the path, one decision at a time
-        </p>
-      </div>
+    <section className="player-flow-canvas relative h-full min-h-0 overflow-hidden">
       <ReactFlow
         key={`path-${player.pathVersion}`}
         colorMode="light"
@@ -145,9 +146,9 @@ export function FlowPlayer({
         proOptions={{ hideAttribution: true }}
       >
         <Background
-          color="rgba(35,37,34,0.16)"
-          gap={26}
-          size={1.5}
+          color="rgba(93,108,122,0.18)"
+          gap={30}
+          size={1.2}
           variant={BackgroundVariant.Dots}
         />
       </ReactFlow>

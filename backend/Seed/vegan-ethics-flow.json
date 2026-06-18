@@ -249,11 +249,17 @@
         "title": "A practical conclusion",
         "text": "If unnecessary harm is avoidable, reducing or replacing animal products becomes a consistent way to act on that reasoning.",
         "type": "conclusion",
-        "choices": [
+        "choices": [],
+        "ctas": [
           {
-            "id": "gentle-next",
-            "label": "See practical next steps",
-            "targetNodeId": "next-steps"
+            "label": "Try Vegan for 7 Days",
+            "url": "https://challenge22.com/",
+            "style": "primary"
+          },
+          {
+            "label": "Read More",
+            "url": "https://veganoutreach.org/why-vegan/",
+            "style": "secondary"
           }
         ]
       },
@@ -262,11 +268,17 @@
         "title": "A demanding position",
         "text": "Allowing preference-based harm is consistent, but it asks us to accept many harms we usually reject in other contexts.",
         "type": "conclusion",
-        "choices": [
+        "choices": [],
+        "ctas": [
           {
-            "id": "hard-next",
-            "label": "Reflect on next steps",
-            "targetNodeId": "next-steps"
+            "label": "Watch a Documentary",
+            "url": "https://www.dominionmovement.com/watch",
+            "style": "primary"
+          },
+          {
+            "label": "Read More",
+            "url": "https://veganoutreach.org/why-vegan/",
+            "style": "secondary"
           }
         ]
       },
@@ -275,11 +287,12 @@
         "title": "Open question",
         "text": "If category membership matters most, the next step is explaining why that category should override comparable suffering.",
         "type": "conclusion",
-        "choices": [
+        "choices": [],
+        "ctas": [
           {
-            "id": "open-next",
-            "label": "Choose what to do next",
-            "targetNodeId": "next-steps"
+            "label": "Explore the argument",
+            "url": "https://veganoutreach.org/why-vegan/",
+            "style": "primary"
           }
         ]
       },
@@ -293,30 +306,6 @@
             "id": "input-finish",
             "label": "For now, continue",
             "targetNodeId": "gentle-conclusion"
-          }
-        ]
-      },
-      "next-steps": {
-        "id": "next-steps",
-        "title": "What would you like to do next?",
-        "text": "If this resonated with you, here are a few low-pressure next steps to keep exploring.",
-        "type": "action",
-        "choices": [],
-        "ctas": [
-          {
-            "label": "Try Vegan for 7 Days",
-            "url": "https://challenge22.com/",
-            "style": "primary"
-          },
-          {
-            "label": "Watch a Documentary",
-            "url": "https://www.dominionmovement.com/watch",
-            "style": "secondary"
-          },
-          {
-            "label": "Read More",
-            "url": "https://veganoutreach.org/why-vegan/",
-            "style": "secondary"
           }
         ]
       }

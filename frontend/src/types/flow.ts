@@ -27,8 +27,7 @@ export type ThoughtFlowNodePosition = {
 export type ThoughtFlowNodeType =
   | "question"
   | "information"
-  | "conclusion"
-  | "action";
+  | "conclusion";
 
 export type ThoughtFlowNode = {
   id: string;

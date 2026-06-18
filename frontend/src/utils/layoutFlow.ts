@@ -5,8 +5,8 @@ export type PositionedNode = {
   position: { x: number; y: number };
 };
 
-const NODE_GAP_X = 460;
-const NODE_GAP_Y = 190;
+const NODE_GAP_X = 560;
+const NODE_GAP_Y = 210;
 
 export function layoutVisibleNodes(
   flow: ThoughtFlowFlow,

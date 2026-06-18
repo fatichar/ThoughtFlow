@@ -44,6 +44,7 @@ import type {
   ThoughtFlowNodeType,
 } from "../types/flow";
 import { layoutEditableFlow } from "../utils/layoutEditorFlow";
+import { normalizeFlow } from "../utils/normalizeFlow";
 import { AnimatedEdge } from "./AnimatedEdge";
 import {
   EditableFlowNode,
@@ -71,7 +72,6 @@ const nodeTypes: ThoughtFlowNodeType[] = [
   "question",
   "information",
   "conclusion",
-  "action",
 ];
 
 const flowTitlePrompt = "Required flow title";
@@ -119,6 +119,7 @@ export function FlowEditor() {
             onCreateConnectedNode: createConnectedNode,
             onDeleteChoice: deleteChoice,
             onDeleteCta: deleteCta,
+            onDeleteNode: deleteNode,
             onSelect: selectNode,
             onUpdateChoice: updateChoice,
             onUpdateCta: updateCta,
@@ -255,8 +256,9 @@ export function FlowEditor() {
   }, [editorSlug]);
 
   function loadFlowIntoEditor(nextFlow: ThoughtFlowFlow) {
-    setFlow(nextFlow);
-    setSelectedNodeId(nextFlow.startNodeId);
+    const normalizedFlow = normalizeFlow(nextFlow);
+    setFlow(normalizedFlow);
+    setSelectedNodeId(normalizedFlow.startNodeId);
     setSaveError(null);
   }
 
@@ -343,12 +345,12 @@ export function FlowEditor() {
     setSelectedNodeId(id);
   }
 
-  function deleteNode() {
-    if (!selectedNode || selectedNode.id === flow.startNodeId) {
+  function deleteNode(nodeId = selectedNode?.id) {
+    if (!nodeId || nodeId === flow.startNodeId || !flow.nodes[nodeId]) {
       return;
     }
 
-    const deletedNodeId = selectedNode.id;
+    const deletedNodeId = nodeId;
     setSaveState("idle");
     setSaveError(null);
     setFlow((current) => {
@@ -373,12 +375,14 @@ export function FlowEditor() {
         nodes: nextNodes,
       };
     });
-    setSelectedNodeId(flow.startNodeId);
+    setSelectedNodeId((current) =>
+      current === deletedNodeId ? flow.startNodeId : current,
+    );
   }
 
   function addChoice(nodeId: string) {
     const node = flow.nodes[nodeId];
-    if (!node) {
+    if (!node || !supportsBranchChoices(node.type)) {
       return;
     }
 
@@ -787,7 +791,11 @@ function EditorInspector({
   onUpdateFlow,
   onUpdateNode,
 }: EditorInspectorProps) {
-  const canHaveChoices = selectedNode?.type !== "action";
+  const canAddChoices = selectedNode
+    ? supportsBranchChoices(selectedNode.type)
+    : false;
+  const canAddCtas = selectedNode ? supportsCtas(selectedNode.type) : false;
+  const canAddPathItem = canAddChoices || canAddCtas;
 
   return (
     <aside className="min-h-0 overflow-y-auto bg-[#fffdf7] px-4 py-4">
@@ -898,17 +906,13 @@ function EditorInspector({
               className="editor-input"
               value={selectedNode.type}
               onChange={(event) =>
-                onUpdateNode(selectedNode.id, {
-                  type: event.target.value as ThoughtFlowNodeType,
-                  choices:
-                    event.target.value === "action" ? [] : selectedNode.choices,
-                  ctas:
-                    event.target.value === "action"
-                      ? selectedNode.ctas ?? [
-                          { label: "", url: "", style: "primary" },
-                        ]
-                      : undefined,
-                })
+                onUpdateNode(
+                  selectedNode.id,
+                  nodeTypePatch(
+                    event.target.value as ThoughtFlowNodeType,
+                    selectedNode,
+                  ),
+                )
               }
             >
               {nodeTypes.map((type) => (
@@ -927,19 +931,28 @@ function EditorInspector({
             <button
               className="editor-small-button"
               type="button"
+              disabled={!canAddPathItem}
               onClick={() =>
-                canHaveChoices ? onAddChoice(selectedNode.id) : onAddCta(selectedNode.id)
+                canAddChoices ? onAddChoice(selectedNode.id) : onAddCta(selectedNode.id)
               }
             >
               <Plus size={15} />
-              {canHaveChoices ? "Add choice" : "Add CTA"}
+              {canAddChoices
+                ? selectedNode.type === "information"
+                  ? "Add path"
+                  : "Add choice"
+                : "Add CTA"}
             </button>
           </div>
 
-          {canHaveChoices ? (
+          {selectedNode.choices.length > 0 || canAddChoices ? (
             <section className="mt-5">
               <p className="mb-3 text-xs font-extrabold uppercase tracking-[0.18em] text-moss">
-                Choice targets
+                {selectedNode.type === "information"
+                  ? "Continue targets"
+                  : canAddChoices
+                    ? "Choice targets"
+                    : "Existing continuations"}
               </p>
               <div className="space-y-3">
                 {selectedNode.choices.map((choice) => (
@@ -1036,7 +1049,7 @@ function makeNode(id: string, type: ThoughtFlowNodeType): ThoughtFlowNode {
     type,
     choices: [],
     ctas:
-      type === "action"
+      supportsCtas(type)
         ? [{ label: "", url: "", style: "primary" }]
         : undefined,
   };
@@ -1073,7 +1086,7 @@ function editorSlugFromUrl() {
 
 function flowForEditorUrl(slug: string | null): ThoughtFlowFlow {
   if (slug === "is-taste-enough") {
-    return { ...veganEthicsFlow, slug: "is-taste-enough" };
+    return normalizeFlow({ ...veganEthicsFlow, slug: "is-taste-enough" });
   }
 
   if (!slug) {
@@ -1082,7 +1095,7 @@ function flowForEditorUrl(slug: string | null): ThoughtFlowFlow {
 
   const draft = readDraft(slug);
   if (draft?.flow) {
-    return draft.flow;
+    return normalizeFlow(draft.flow);
   }
 
   return {
@@ -1150,11 +1163,7 @@ function validateFlow(flow: ThoughtFlowFlow) {
       });
     }
 
-    if (
-      node.choices.length === 0 &&
-      node.type !== "conclusion" &&
-      node.type !== "action"
-    ) {
+    if (node.choices.length === 0 && supportsBranchChoices(node.type)) {
       issueMap.set(`dead-${node.id}`, {
         id: `dead-${node.id}`,
         label: `${node.id} is a dead-end ${node.type} node.`,
@@ -1173,9 +1182,47 @@ function validateFlow(flow: ThoughtFlowFlow) {
         });
       }
     }
+
+    if (supportsCtas(node.type)) {
+      const hasIncompleteCta = node.ctas?.some((cta) => {
+        const hasText = cta.label.trim() !== "";
+        const hasUrl = cta.url.trim() !== "";
+        return (hasText || hasUrl) && (!hasText || !hasUrl);
+      });
+
+      if (hasIncompleteCta) {
+        issueMap.set(`incomplete-cta-${node.id}`, {
+          id: `incomplete-cta-${node.id}`,
+          label: `${node.id} has a CTA missing text or URL.`,
+          nodeId: node.id,
+          severity: "warning",
+        });
+      }
+    }
   }
 
   return [...issueMap.values()];
+}
+
+function supportsBranchChoices(type: ThoughtFlowNodeType) {
+  return type === "question" || type === "information";
+}
+
+function supportsCtas(type: ThoughtFlowNodeType) {
+  return type === "conclusion";
+}
+
+function nodeTypePatch(
+  type: ThoughtFlowNodeType,
+  node: ThoughtFlowNode,
+): Partial<ThoughtFlowNode> {
+  return {
+    type,
+    choices: supportsBranchChoices(type) ? node.choices : [],
+    ctas: supportsCtas(type)
+      ? node.ctas ?? [{ label: "", url: "", style: "primary" }]
+      : undefined,
+  };
 }
 
 function targetOptionLabel(target: ThoughtFlowNode, flow: ThoughtFlowFlow) {
