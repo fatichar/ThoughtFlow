@@ -19,7 +19,9 @@ export function FlowSidebar({ flow, player }: FlowSidebarProps) {
           Current Node
         </div>
         <div className="border-l-4 border-moss bg-oat/55 p-4">
-          <p className="font-display text-2xl leading-7">{currentNode.title}</p>
+          <p className="text-sm font-semibold leading-6 text-ink/75">
+            {currentNode.text}
+          </p>
           <p className="mt-2 text-xs font-bold uppercase tracking-[0.14em] text-ink/45">
             {currentNode.id} / {currentNode.type}
           </p>

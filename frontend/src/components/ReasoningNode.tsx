@@ -113,7 +113,9 @@ function ReasoningNodeComponent({ data }: NodeProps) {
       <h2 className="font-display text-[28px] leading-none text-ink">
         {node.title}
       </h2>
-      <p className="mt-3 text-[15px] leading-6 text-ink/75">{node.text}</p>
+      {node.text.trim() ? (
+        <p className="mt-3 text-[15px] leading-6 text-ink/75">{node.text}</p>
+      ) : null}
 
       {isAction ? (
         <div className="mt-6">

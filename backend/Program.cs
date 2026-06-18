@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using ThoughtFlow.Api.Contracts;
+using Scalar.AspNetCore;
 using ThoughtFlow.Api.Data;
 using ThoughtFlow.Api.Data.Entities;
 using ThoughtFlow.Api.Seed;
@@ -28,6 +29,8 @@ builder.Services.AddDbContext<ThoughtFlowDbContext>(options =>
     options.UseNpgsql(connectionString));
 builder.Services.AddScoped<FlowSeeder>();
 
+builder.Services.AddOpenApi();
+
 var app = builder.Build();
 
 if (app.Configuration.GetValue("Database:Migrate", false))
@@ -38,6 +41,12 @@ if (app.Configuration.GetValue("Database:Migrate", false))
 }
 
 app.UseCors("Frontend");
+
+if (app.Environment.IsDevelopment())
+{
+    app.MapOpenApi();
+    app.MapScalarApiReference();
+}
 
 app.MapGet("/api/health", () => Results.Ok(new
 {
@@ -89,7 +98,7 @@ app.MapGet("/api/flows/{slug}", async (
         flow.Slug,
         flow.Title,
         flow.Description,
-        flow.FlowJson.RootElement.Clone(),
+        flow.FlowJson.Deserialize<FlowModel>(AppJson.Options)!,
         flow.Tags.Select(t => new TagResponse(t.Id, t.Name, t.Color)).ToList()));
 });
 
@@ -107,7 +116,7 @@ app.MapPut("/api/flows/{slug}", async (
 
     var now = DateTimeOffset.UtcNow;
     var flowJson = JsonSerializer.SerializeToDocument(request.Flow, AppJson.Options);
-    var title = string.IsNullOrWhiteSpace(request.Title) ? TitleFromSlug(slug) : request.Title.Trim();
+    var title = request.Title.Trim();
     var description = string.IsNullOrWhiteSpace(request.Description) ? null : request.Description.Trim();
     var flow = await dbContext.Flows
         .Include(f => f.Tags)
@@ -142,7 +151,7 @@ app.MapPut("/api/flows/{slug}", async (
         flow.Slug,
         flow.Title,
         flow.Description,
-        flow.FlowJson.RootElement.Clone(),
+        flow.FlowJson.Deserialize<FlowModel>(AppJson.Options)!,
         flow.Tags.Select(t => new TagResponse(t.Id, t.Name, t.Color)).ToList()));
 });
 
@@ -285,9 +294,27 @@ static string? ValidateSaveFlowRequest(string slug, SaveFlowRequest request)
         return "slug is required.";
     }
 
-    if (request.Flow.ValueKind is not JsonValueKind.Object)
+    if (request.Flow is null)
     {
-        return "flow must be a JSON object.";
+        return "flow is required.";
+    }
+
+    if (string.IsNullOrWhiteSpace(request.Title))
+    {
+        return "title is required.";
+    }
+
+    if (string.IsNullOrWhiteSpace(request.Flow.Title))
+    {
+        return "flow.title is required.";
+    }
+
+    foreach (var node in request.Flow.Nodes.Values)
+    {
+        if (string.IsNullOrWhiteSpace(node.Title))
+        {
+            return $"node '{node.Id}' title is required.";
+        }
     }
 
     return null;
@@ -312,15 +339,6 @@ static string? ValidateResultRequest(SubmitFlowResultRequest request)
     }
 
     return null;
-}
-
-static string TitleFromSlug(string slug)
-{
-    var words = slug
-        .Split('-', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-        .Select(word => char.ToUpperInvariant(word[0]) + word[1..]);
-
-    return string.Join(' ', words);
 }
 
 static string EscapeLikePattern(string value)

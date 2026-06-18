@@ -81,6 +81,80 @@ button {
   @apply inline-flex min-h-9 items-center gap-2 rounded-sm border border-ink/10 bg-white/60 px-3 py-2 text-xs font-extrabold uppercase tracking-[0.12em] text-ink transition hover:-translate-y-0.5 hover:border-moss/40 hover:bg-white hover:text-moss;
 }
 
+.editor-toolbar-button {
+  @apply inline-flex min-h-10 items-center gap-2 rounded-sm border border-ink/10 bg-white/60 px-3 py-2 text-xs font-extrabold uppercase tracking-[0.12em] text-ink transition hover:-translate-y-0.5 hover:border-moss/40 hover:bg-white hover:text-moss disabled:cursor-default disabled:opacity-55 disabled:hover:translate-y-0;
+}
+
+.editor-toolbar-button-primary {
+  @apply border-moss bg-moss text-canvas hover:bg-ink hover:text-canvas;
+}
+
+.editable-flow-node {
+  @apply cursor-grab;
+}
+
+.editable-flow-node:active {
+  @apply cursor-grabbing;
+}
+
+.editable-flow-node-selected {
+  @apply border-moss shadow-active;
+}
+
+.editable-flow-node-selected::before {
+  content: "";
+  position: absolute;
+  inset: -8px;
+  z-index: -1;
+  border: 1px solid rgba(126, 160, 90, 0.34);
+  border-radius: 8px;
+  background: rgba(126, 160, 90, 0.08);
+}
+
+.editable-flow-node-action {
+  @apply bg-[#fffaf1];
+}
+
+.editable-node-title {
+  @apply block w-full border-0 bg-transparent p-0 font-display text-[28px] leading-none text-ink outline-none placeholder:text-ink/30;
+}
+
+.editable-node-text {
+  @apply mt-3 block min-h-20 w-full resize-y border-0 bg-transparent p-0 text-[15px] font-semibold leading-6 text-ink/75 outline-none placeholder:text-ink/35;
+}
+
+.editable-node-select {
+  @apply mt-2 block w-full rounded-sm border border-ink/10 bg-white/70 px-3 py-2 text-sm font-bold normal-case tracking-normal text-ink outline-none transition focus:border-moss focus:bg-white;
+}
+
+.editor-card-action {
+  @apply inline-flex min-h-8 items-center gap-1 rounded-sm border border-ink/10 bg-white/55 px-2 py-1 text-[10px] font-extrabold uppercase tracking-[0.12em] text-ink transition hover:border-moss/40 hover:bg-white hover:text-moss;
+}
+
+.editable-choice-row {
+  @apply relative grid min-h-12 grid-cols-[1fr_auto_auto] items-center gap-2 rounded-sm border border-ink/10 bg-[#f7f1e3] px-3 py-2 transition hover:border-moss/45 hover:bg-white;
+}
+
+.editable-choice-input {
+  @apply min-w-0 border-0 bg-transparent text-sm font-extrabold leading-5 text-ink outline-none placeholder:text-ink/35;
+}
+
+.editable-choice-icon {
+  @apply grid h-8 w-8 place-items-center rounded-sm text-ink/55 transition hover:bg-moss/10 hover:text-moss;
+}
+
+.editable-cta-row {
+  @apply grid gap-2 rounded-sm border border-clay/15 bg-[#fff7ea] p-3;
+}
+
+.editor-choice-handle {
+  right: -18px !important;
+  width: 10px !important;
+  height: 10px !important;
+  border: 2px solid #fffdf7 !important;
+  background: #b15f43 !important;
+}
+
 .flow-handle {
   width: 8px !important;
   height: 8px !important;

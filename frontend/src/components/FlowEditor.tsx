@@ -1,41 +1,70 @@
-import { ReactFlowProvider } from "@xyflow/react";
+import {
+  Background,
+  BackgroundVariant,
+  ReactFlow,
+  ReactFlowProvider,
+  applyNodeChanges,
+  type Connection,
+  type Edge,
+  type EdgeTypes,
+  type Node,
+  type NodeChange,
+  type NodeTypes,
+} from "@xyflow/react";
+import "@xyflow/react/dist/style.css";
 import {
   AlertTriangle,
   Copy,
+  Download,
+  ExternalLink,
   FilePlus2,
-  GitBranch,
-  ListTree,
+  Network,
   Play,
   Plus,
   Save,
   Trash2,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import {
   fetchPublishedFlow,
   listFlows,
   savePublishedFlow,
   type FlowSummary,
+  type SavePublishedFlowInput,
 } from "../api/flows";
 import { listTags } from "../api/tags";
 import { veganEthicsFlow } from "../data/veganEthicsFlow";
-import { useFlowPlayer } from "../hooks/useFlowPlayer";
 import type {
   Tag,
   ThoughtFlowChoice,
   ThoughtFlowCta,
   ThoughtFlowFlow,
   ThoughtFlowNode,
+  ThoughtFlowNodePosition,
   ThoughtFlowNodeType,
 } from "../types/flow";
-import { FlowPlayer } from "./FlowPlayer";
+import { layoutEditableFlow } from "../utils/layoutEditorFlow";
+import { AnimatedEdge } from "./AnimatedEdge";
+import {
+  EditableFlowNode,
+  type EditableFlowNodeData,
+} from "./EditableFlowNode";
 import { FlowLibrary } from "./FlowLibrary";
 import { TagComboBox } from "./TagComboBox";
 
 type ValidationIssue = {
   id: string;
   label: string;
+  nodeId?: string;
   severity: "warning" | "error";
+};
+
+const editorNodeTypes: NodeTypes = {
+  editable: EditableFlowNode,
+};
+
+const editorEdgeTypes: EdgeTypes = {
+  animated: AnimatedEdge,
 };
 
 const nodeTypes: ThoughtFlowNodeType[] = [
@@ -45,14 +74,8 @@ const nodeTypes: ThoughtFlowNodeType[] = [
   "action",
 ];
 
-const flowTitlePrompt = "Untitled Flow";
-const nodeTitlePrompt = "Untitled node";
-const startNodeTitlePrompt = "Start here";
-const nodeTextPrompt = "Write the thought, question, or next step here.";
-const startNodeTextPrompt = "Write the opening question or idea for this flow.";
-const choiceLabelPrompt = "New choice";
-const ctaLabelPrompt = "Try Vegan for 7 Days";
-const ctaUrlPrompt = "https://example.com";
+const flowTitlePrompt = "Required flow title";
+const draftStoragePrefix = "thoughtflow-editor-draft";
 
 export function FlowEditor() {
   const [editorSlug, setEditorSlug] = useState(() => editorSlugFromUrl());
@@ -63,49 +86,85 @@ export function FlowEditor() {
   const [tagListState, setTagListState] = useState<"idle" | "error">("idle");
   const [loadFlowState, setLoadFlowState] = useState<"idle" | "error">("idle");
   const [selectedNodeId, setSelectedNodeId] = useState(flow.startNodeId);
-  const [previewStartNodeId, setPreviewStartNodeId] = useState(
-    flow.startNodeId,
-  );
-  const [previewRunVersion, setPreviewRunVersion] = useState(0);
-  const [expandedNodeIds, setExpandedNodeIds] = useState<Set<string>>(
-    () => new Set(Object.keys(flow.nodes)),
-  );
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">(
     "idle",
   );
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [draftState, setDraftState] = useState<"idle" | "saved">("idle");
   const [flowSummaries, setFlowSummaries] = useState<FlowSummary[]>([]);
   const [listState, setListState] = useState<"idle" | "loading" | "error">("idle");
-  const [isCompactPreview, setIsCompactPreview] = useState(
-    () => window.innerWidth <= 1180,
-  );
+  const [canvasNodes, setCanvasNodes] = useState<Node<EditableFlowNodeData>[]>([]);
+  const hasHydratedDraftRef = useRef(false);
 
   const selectedNode = flow.nodes[selectedNodeId] ?? flow.nodes[flow.startNodeId];
   const validation = useMemo(() => validateFlow(flow), [flow]);
-  const previewFlow = useMemo(
-    () => ({
-      ...flow,
-      id: `${flow.id}-preview-${previewStartNodeId}-${previewRunVersion}`,
-      startNodeId: previewStartNodeId,
-    }),
-    [flow, previewRunVersion, previewStartNodeId],
+  const positionedNodes = useMemo(() => layoutEditableFlow(flow), [flow]);
+  const playSlug = flow.slug ?? slugify(flow.title || flow.id);
+
+  const computedNodes = useMemo<Node<EditableFlowNodeData>[]>(
+    () =>
+      positionedNodes.map(({ id, position }) => {
+        const node = flow.nodes[id];
+        return {
+          id,
+          type: "editable",
+          position,
+          dragHandle: ".node-drag-handle",
+          data: {
+            node,
+            isSelected: id === selectedNode?.id,
+            isStartNode: id === flow.startNodeId,
+            onAddChoice: addChoice,
+            onAddCta: addCta,
+            onCreateConnectedNode: createConnectedNode,
+            onDeleteChoice: deleteChoice,
+            onDeleteCta: deleteCta,
+            onSelect: selectNode,
+            onUpdateChoice: updateChoice,
+            onUpdateCta: updateCta,
+            onUpdateNode: updateNode,
+          },
+        };
+      }),
+    [flow, positionedNodes, selectedNode?.id],
   );
-  const previewPlayer = useFlowPlayer(previewFlow);
+
+  const edges = useMemo<Edge[]>(
+    () =>
+      Object.values(flow.nodes).flatMap((node) =>
+        node.choices
+          .filter((choice) => choice.targetNodeId && flow.nodes[choice.targetNodeId])
+          .map((choice) => ({
+            id: `${node.id}-${choice.id}-${choice.targetNodeId}`,
+            source: node.id,
+            sourceHandle: choice.id,
+            target: choice.targetNodeId,
+            type: "animated",
+            data: { active: false },
+          })),
+      ),
+    [flow.nodes],
+  );
+
+  useEffect(() => {
+    const slug = flow.slug ?? editorSlug;
+    if (!slug) {
+      return;
+    }
+
+    persistDraft(slug, makeSaveInput(flow, slug));
+    setDraftState("saved");
+  }, [editorSlug, flow]);
+
+  useEffect(() => {
+    setCanvasNodes(computedNodes);
+  }, [computedNodes]);
 
   useEffect(() => {
     const syncEditorSlug = () => setEditorSlug(editorSlugFromUrl());
 
     window.addEventListener("popstate", syncEditorSlug);
     return () => window.removeEventListener("popstate", syncEditorSlug);
-  }, []);
-
-  useEffect(() => {
-    const mediaQuery = window.matchMedia("(max-width: 1180px)");
-    const syncPreviewLayout = () => setIsCompactPreview(mediaQuery.matches);
-
-    syncPreviewLayout();
-    mediaQuery.addEventListener("change", syncPreviewLayout);
-
-    return () => mediaQuery.removeEventListener("change", syncPreviewLayout);
   }, []);
 
   useEffect(() => {
@@ -178,6 +237,17 @@ export function FlowEditor() {
           return;
         }
 
+        if (hasHydratedDraftRef.current) {
+          setLoadFlowState("error");
+          return;
+        }
+
+        const draft = readDraft(editorSlug);
+        if (draft?.flow) {
+          hasHydratedDraftRef.current = true;
+          loadFlowIntoEditor(draft.flow);
+        }
+
         setLoadFlowState("error");
       });
 
@@ -187,28 +257,75 @@ export function FlowEditor() {
   function loadFlowIntoEditor(nextFlow: ThoughtFlowFlow) {
     setFlow(nextFlow);
     setSelectedNodeId(nextFlow.startNodeId);
-    setPreviewStartNodeId(nextFlow.startNodeId);
-    setPreviewRunVersion((version) => version + 1);
-    setExpandedNodeIds(new Set(Object.keys(nextFlow.nodes)));
+    setSaveError(null);
+  }
+
+  function selectNode(nodeId: string) {
+    if (flow.nodes[nodeId]) {
+      setSelectedNodeId(nodeId);
+    }
   }
 
   function updateNode(nodeId: string, patch: Partial<ThoughtFlowNode>) {
+    setSaveState("idle");
+    setSaveError(null);
+    setFlow((current) => {
+      const existingNode = current.nodes[nodeId];
+      if (!existingNode) {
+        return current;
+      }
+
+      return {
+        ...current,
+        nodes: {
+          ...current.nodes,
+          [nodeId]: {
+            ...existingNode,
+            ...patch,
+          },
+        },
+      };
+    });
+  }
+
+  function addNode() {
+    const id = uniqueNodeId(flow, "question");
+    setSaveState("idle");
+    setSaveError(null);
     setFlow((current) => ({
       ...current,
-      nodes: {
-        ...current.nodes,
-        [nodeId]: {
-          ...current.nodes[nodeId],
-          ...patch,
+      editor: {
+        ...current.editor,
+        positions: {
+          ...current.editor?.positions,
+          [id]: nextAvailablePosition(current),
         },
       },
+      nodes: {
+        ...current.nodes,
+        [id]: makeNode(id, "question"),
+      },
     }));
+    setSelectedNodeId(id);
   }
 
   function duplicateNode() {
+    if (!selectedNode) {
+      return;
+    }
+
     const id = uniqueNodeId(flow, selectedNode.type);
+    setSaveState("idle");
+    setSaveError(null);
     setFlow((current) => ({
       ...current,
+      editor: {
+        ...current.editor,
+        positions: {
+          ...current.editor?.positions,
+          [id]: offsetPosition(current.editor?.positions?.[selectedNode.id], 48, 48),
+        },
+      },
       nodes: {
         ...current.nodes,
         [id]: {
@@ -227,90 +344,208 @@ export function FlowEditor() {
   }
 
   function deleteNode() {
-    if (selectedNode.id === flow.startNodeId) {
+    if (!selectedNode || selectedNode.id === flow.startNodeId) {
       return;
     }
 
-    const nextSelectedId = flow.startNodeId;
+    const deletedNodeId = selectedNode.id;
+    setSaveState("idle");
+    setSaveError(null);
     setFlow((current) => {
       const nextNodes = { ...current.nodes };
-      delete nextNodes[selectedNode.id];
+      delete nextNodes[deletedNodeId];
 
       for (const nodeId of Object.keys(nextNodes)) {
         nextNodes[nodeId] = {
           ...nextNodes[nodeId],
           choices: nextNodes[nodeId].choices.filter(
-            (choice) => choice.targetNodeId !== selectedNode.id,
+            (choice) => choice.targetNodeId !== deletedNodeId,
           ),
         };
       }
 
-      return { ...current, nodes: nextNodes };
+      return {
+        ...current,
+        editor: {
+          ...current.editor,
+          positions: removePosition(current.editor?.positions, deletedNodeId),
+        },
+        nodes: nextNodes,
+      };
     });
-    setSelectedNodeId(nextSelectedId);
+    setSelectedNodeId(flow.startNodeId);
   }
 
-  function addChoice() {
+  function addChoice(nodeId: string) {
+    const node = flow.nodes[nodeId];
+    if (!node) {
+      return;
+    }
+
     const choice: ThoughtFlowChoice = {
-      id: uniqueChoiceId(selectedNode),
+      id: uniqueChoiceId(node),
       label: "",
       targetNodeId: "",
     };
-    updateNode(selectedNode.id, { choices: [...selectedNode.choices, choice] });
+    updateNode(nodeId, { choices: [...node.choices, choice] });
   }
 
-  function updateChoice(choiceId: string, patch: Partial<ThoughtFlowChoice>) {
-    updateNode(selectedNode.id, {
-      choices: selectedNode.choices.map((choice) =>
+  function updateChoice(
+    nodeId: string,
+    choiceId: string,
+    patch: Partial<ThoughtFlowChoice>,
+  ) {
+    const node = flow.nodes[nodeId];
+    if (!node) {
+      return;
+    }
+
+    updateNode(nodeId, {
+      choices: node.choices.map((choice) =>
         choice.id === choiceId ? { ...choice, ...patch } : choice,
       ),
     });
   }
 
-  function deleteChoice(choiceId: string) {
-    updateNode(selectedNode.id, {
-      choices: selectedNode.choices.filter((choice) => choice.id !== choiceId),
+  function deleteChoice(nodeId: string, choiceId: string) {
+    const node = flow.nodes[nodeId];
+    if (!node) {
+      return;
+    }
+
+    updateNode(nodeId, {
+      choices: node.choices.filter((choice) => choice.id !== choiceId),
     });
   }
 
-  function createConnectedNode(choiceId: string) {
+  function createConnectedNode(nodeId: string, choiceId: string) {
+    const sourceNode = flow.nodes[nodeId];
+    if (!sourceNode) {
+      return;
+    }
+
     const id = uniqueNodeId(flow, "question");
     const node = makeNode(id, "question");
-
+    setSaveState("idle");
+    setSaveError(null);
     setFlow((current) => ({
       ...current,
-      nodes: { ...current.nodes, [id]: node },
+      editor: {
+        ...current.editor,
+        positions: {
+          ...current.editor?.positions,
+          [id]: offsetPosition(current.editor?.positions?.[nodeId], 520, 180),
+        },
+      },
+      nodes: {
+        ...current.nodes,
+        [id]: node,
+        [nodeId]: {
+          ...current.nodes[nodeId],
+          choices: current.nodes[nodeId].choices.map((choice) =>
+            choice.id === choiceId ? { ...choice, targetNodeId: id } : choice,
+          ),
+        },
+      },
     }));
-    updateChoice(choiceId, { targetNodeId: id });
     setSelectedNodeId(id);
-    setExpandedNodeIds((current) => new Set([...current, selectedNode.id]));
   }
 
-  function updateCta(index: number, patch: Partial<ThoughtFlowCta>) {
-    const ctas = [...(selectedNode.ctas ?? [])];
+  function updateCta(nodeId: string, index: number, patch: Partial<ThoughtFlowCta>) {
+    const node = flow.nodes[nodeId];
+    if (!node) {
+      return;
+    }
+
+    const ctas = [...(node.ctas ?? [])];
     ctas[index] = { ...ctas[index], ...patch };
-    updateNode(selectedNode.id, { ctas });
+    updateNode(nodeId, { ctas });
   }
 
-  function addCta() {
-    updateNode(selectedNode.id, {
-      ctas: [
-        ...(selectedNode.ctas ?? []),
-        { label: "", url: "", style: "secondary" },
-      ],
+  function addCta(nodeId: string) {
+    const node = flow.nodes[nodeId];
+    if (!node) {
+      return;
+    }
+
+    updateNode(nodeId, {
+      ctas: [...(node.ctas ?? []), { label: "", url: "", style: "secondary" }],
     });
   }
 
-  function deleteCta(index: number) {
-    updateNode(selectedNode.id, {
-      ctas: selectedNode.ctas?.filter((_, ctaIndex) => ctaIndex !== index) ?? [],
+  function deleteCta(nodeId: string, index: number) {
+    const node = flow.nodes[nodeId];
+    if (!node) {
+      return;
+    }
+
+    updateNode(nodeId, {
+      ctas: node.ctas?.filter((_, ctaIndex) => ctaIndex !== index) ?? [],
     });
   }
 
-  function playFromHere(nodeId: string) {
-    setSelectedNodeId(nodeId);
-    setPreviewStartNodeId(nodeId);
-    setPreviewRunVersion((version) => version + 1);
+  function connectChoice(connection: Connection) {
+    if (!connection.source || !connection.sourceHandle || !connection.target) {
+      return;
+    }
+
+    const sourceNode = flow.nodes[connection.source];
+    if (!sourceNode || !flow.nodes[connection.target]) {
+      return;
+    }
+
+    updateChoice(connection.source, connection.sourceHandle, {
+      targetNodeId: connection.target,
+    });
+    setSelectedNodeId(connection.source);
+  }
+
+  function changeCanvasNodes(changes: NodeChange<Node<EditableFlowNodeData>>[]) {
+    setCanvasNodes((current) =>
+      applyNodeChanges<Node<EditableFlowNodeData>>(changes, current),
+    );
+  }
+
+  function moveNode(_: MouseEvent, node: Node<EditableFlowNodeData>) {
+    const nextPosition = {
+      x: Math.round(node.position.x),
+      y: Math.round(node.position.y),
+    };
+
+    setSaveState("idle");
+    setSaveError(null);
+    setFlow((current) => ({
+      ...current,
+      editor: {
+        ...current.editor,
+        positions: {
+          ...current.editor?.positions,
+          [node.id]: nextPosition,
+        },
+      },
+    }));
+  }
+
+  function resetLayout() {
+    setSaveState("idle");
+    setSaveError(null);
+    setFlow((current) => {
+      const { editor: _editor, ...flowWithoutEditor } = current;
+      return flowWithoutEditor;
+    });
+  }
+
+  function setSelectedAsStart() {
+    if (!selectedNode) {
+      return;
+    }
+
+    setSaveState("idle");
+    setSaveError(null);
+    setFlow((current) => ({
+      ...current,
+      startNodeId: selectedNode.id,
+    }));
   }
 
   function createFlow() {
@@ -321,8 +556,21 @@ export function FlowEditor() {
   }
 
   async function saveFlowUrl() {
+    if (!flow.title.trim()) {
+      setSaveState("error");
+      setSaveError("Flow title is required before publishing.");
+      return;
+    }
+
+    const blockingIssue = validation.find((issue) => issue.severity === "error");
+    if (blockingIssue) {
+      setSaveState("error");
+      setSaveError(blockingIssue.label);
+      return;
+    }
+
     const slug = slugify(flow.title);
-    const title = flow.title.trim() || titleFromSlug(slug);
+    const title = flow.title.trim();
     const nextFlow = {
       ...flow,
       id: slugToId(slug),
@@ -331,22 +579,25 @@ export function FlowEditor() {
     };
 
     setSaveState("saving");
+    setSaveError(null);
     setFlow(nextFlow);
+    persistDraft(slug, makeSaveInput(nextFlow, slug));
     window.history.replaceState(null, "", `/editor/${slug}`);
     setEditorSlug(slug);
 
     try {
-      await savePublishedFlow({
-        slug,
-        title,
-        description: nextFlow.description,
-        flow: nextFlow,
-        tagIds: nextFlow.tags?.map((t) => t.id) ?? [],
-      });
+      await savePublishedFlow(makeSaveInput(nextFlow, slug));
       setSaveState("saved");
-    } catch {
+      clearDraft(slug);
+    } catch (error) {
       setSaveState("error");
+      setSaveError(error instanceof Error ? error.message : "Could not save flow");
     }
+  }
+
+  function exportDraft() {
+    const slug = flow.slug ?? editorSlug ?? slugify(flow.title);
+    downloadJson(`thoughtflow-${slug}.json`, makeSaveInput(flow, slug));
   }
 
   if (!editorSlug) {
@@ -361,514 +612,390 @@ export function FlowEditor() {
   }
 
   return (
-    <div className="grid h-screen grid-cols-[320px_minmax(420px,540px)_minmax(0,1fr)] overflow-hidden bg-canvas text-ink max-[1180px]:grid-cols-[300px_1fr]">
-      <aside className="min-h-0 overflow-y-auto border-r border-ink/10 bg-[#fbf8f0] px-4 py-4">
-        <div className="mb-4 flex items-center justify-between gap-3">
-          <div>
-            <p className="font-display text-2xl leading-7">Flow editor</p>
-            <p className="text-xs font-bold uppercase tracking-[0.16em] text-moss">
-              Writing outline
+    <div className="grid h-screen grid-rows-[64px_minmax(0,1fr)] overflow-hidden bg-canvas text-ink">
+      <header className="flex items-center justify-between gap-4 border-b border-ink/10 bg-[#fbf8f0] px-5">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <Network size={18} className="text-moss" />
+            <p className="truncate font-display text-2xl leading-7">
+              {flow.title || flowTitlePrompt}
             </p>
           </div>
+          <p className="truncate text-[11px] font-bold uppercase tracking-[0.16em] text-moss">
+            WYSIWYG editor - {Object.keys(flow.nodes).length} nodes
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <a
+            className="editor-toolbar-button"
+            href={`/play/${encodeURIComponent(playSlug)}`}
+            target="_blank"
+            rel="noreferrer"
+          >
+            <ExternalLink size={16} />
+            Play
+          </a>
+          <button className="editor-toolbar-button" type="button" onClick={exportDraft}>
+            <Download size={16} />
+            Export
+          </button>
+          <button className="editor-toolbar-button" type="button" onClick={resetLayout}>
+            Reset layout
+          </button>
+          <button className="editor-toolbar-button" type="button" onClick={addNode}>
+            <Plus size={16} />
+            Node
+          </button>
           <button
-            className="icon-button"
+            className="editor-toolbar-button editor-toolbar-button-primary"
             type="button"
-            title="Publish flow"
-            aria-label="Publish flow"
             disabled={saveState === "saving"}
             onClick={saveFlowUrl}
           >
-            <Save size={18} />
+            <Save size={16} />
+            {saveState === "saving" ? "Saving" : "Publish"}
           </button>
         </div>
+      </header>
 
-        <div className="mb-4 space-y-3 border border-ink/10 bg-white/45 px-3 py-3">
-          <label className="block text-[11px] font-extrabold uppercase tracking-[0.14em] text-moss">
-            Flow title
-            <input
-              className="mt-2 block w-full border border-ink/10 bg-[#fffdf7] px-2 py-2 text-sm font-extrabold normal-case tracking-normal text-ink outline-none focus:border-moss"
-              placeholder={flowTitlePrompt}
-              value={flow.title}
-              onChange={(event) =>
-                setFlow((current) => ({
-                  ...current,
-                  title: event.target.value,
-                }))
-              }
-            />
-          </label>
-          <div className="block text-[11px] font-extrabold uppercase tracking-[0.14em] text-moss">
-            <p>Tags</p>
-            <div className="mt-2 normal-case tracking-normal">
-              <TagComboBox
-                availableTags={availableTags}
-                selectedTags={flow.tags ?? []}
-                onTagsChange={(tags) =>
-                  setFlow((current) => ({
-                    ...current,
-                    tags,
-                  }))
-                }
-                onTagCreated={(tag) =>
-                  setAvailableTags((current) =>
-                    current.some((existingTag) => existingTag.id === tag.id)
-                      ? current
-                      : [...current, tag],
-                  )
-                }
-              />
-              {tagListState === "error" ? (
-                <p className="mt-2 border border-clay/20 bg-[#fff7ea] px-2 py-2 text-xs font-bold text-clay">
-                  Could not load tags.
-                </p>
-              ) : null}
+      <main className="grid min-h-0 grid-cols-[minmax(0,1fr)_380px] max-[980px]:grid-cols-1">
+        <ReactFlowProvider>
+          <section className="relative min-h-0 overflow-hidden border-r border-ink/10 max-[980px]:h-[62vh] max-[980px]:border-r-0">
+            <div className="pointer-events-none absolute left-5 top-5 z-10 max-w-md rounded-sm border border-ink/10 bg-[#f9f6ed]/85 px-3 py-2 text-xs font-bold uppercase tracking-[0.16em] text-moss shadow-sm backdrop-blur">
+              Drag cards to arrange. Scroll to pan. Drag from a choice handle to connect.
             </div>
-          </div>
-          <p className="mt-1 truncate text-[11px] font-bold uppercase tracking-[0.12em] text-ink/45">
-            /play/{flow.slug ?? flow.id}
-          </p>
-          {saveState !== "idle" ? (
-            <p className="mt-2 text-[11px] font-extrabold uppercase tracking-[0.14em] text-moss">
-              {saveState === "saving"
-                ? "Saving..."
-                : saveState === "saved"
-                  ? "Published"
-                  : "Save failed"}
-            </p>
-          ) : null}
-          {loadFlowState === "error" ? (
-            <p className="mt-2 border border-clay/20 bg-[#fff7ea] px-2 py-2 text-xs font-bold text-clay">
-              Could not load this flow. You are editing a local draft.
-            </p>
-          ) : null}
-        </div>
+            <ReactFlow
+              colorMode="light"
+              edgeTypes={editorEdgeTypes}
+              edges={edges}
+              fitView
+              maxZoom={1.3}
+              minZoom={0.32}
+              nodes={canvasNodes}
+              nodesConnectable
+              nodesDraggable
+              nodeTypes={editorNodeTypes}
+              onConnect={connectChoice}
+              onNodeDragStop={moveNode}
+              onNodeClick={(_, node) => selectNode(node.id)}
+              onNodesChange={changeCanvasNodes}
+              panOnDrag={false}
+              panOnScroll
+              proOptions={{ hideAttribution: true }}
+            >
+              <Background
+                color="rgba(35,37,34,0.16)"
+                gap={26}
+                size={1.5}
+                variant={BackgroundVariant.Dots}
+              />
+            </ReactFlow>
+          </section>
+        </ReactFlowProvider>
 
-        <OutlineNode
-          depth={0}
-          expandedNodeIds={expandedNodeIds}
+        <EditorInspector
+          availableTags={availableTags}
+          draftState={draftState}
           flow={flow}
-          nodeId={flow.startNodeId}
-          onPlayFromHere={playFromHere}
-          onSelect={setSelectedNodeId}
-          onToggle={(nodeId) =>
-            setExpandedNodeIds((current) => toggleSetValue(current, nodeId))
-          }
-          selectedNodeId={selectedNode.id}
-          seenNodeIds={new Set()}
-        />
-
-        <ValidationPanel issues={validation} />
-      </aside>
-
-      <section className="min-h-0 overflow-y-auto border-r border-ink/10 bg-[#fffdf7] px-5 py-5">
-        <NodeEditorForm
-          flow={flow}
-          node={selectedNode}
+          issues={validation}
+          loadFlowState={loadFlowState}
+          saveError={saveError}
+          saveState={saveState}
+          selectedNode={selectedNode}
+          tagListState={tagListState}
           onAddChoice={addChoice}
           onAddCta={addCta}
           onCreateConnectedNode={createConnectedNode}
-          onDeleteChoice={deleteChoice}
-          onDeleteCta={deleteCta}
           onDeleteNode={deleteNode}
           onDuplicateNode={duplicateNode}
-          onPlayFromHere={playFromHere}
+          onSelectIssue={(issue) => issue.nodeId && selectNode(issue.nodeId)}
+          onSetStart={setSelectedAsStart}
+          onTagsChange={(tags) => {
+            setSaveState("idle");
+            setSaveError(null);
+            setFlow((current) => ({ ...current, tags }));
+          }}
+          onTagCreated={(tag) =>
+            setAvailableTags((current) =>
+              current.some((existingTag) => existingTag.id === tag.id)
+                ? current
+                : [...current, tag],
+            )
+          }
           onUpdateChoice={updateChoice}
-          onUpdateCta={updateCta}
-          onUpdateNode={(patch) => updateNode(selectedNode.id, patch)}
+          onUpdateFlow={(patch) => {
+            setSaveState("idle");
+            setSaveError(null);
+            setFlow((current) => ({ ...current, ...patch }));
+          }}
+          onUpdateNode={updateNode}
         />
-        {isCompactPreview ? (
-          <section className="mt-6 h-[560px] overflow-hidden border border-ink/10 bg-canvas">
-            <ReactFlowProvider>
-              <PreviewHeader previewStartNodeId={previewStartNodeId} />
-              <div className="h-[calc(560px-56px)]">
-                <FlowPlayer
-                  key={`inline-${previewFlow.id}`}
-                  flow={previewFlow}
-                  player={previewPlayer}
-                />
-              </div>
-            </ReactFlowProvider>
-          </section>
-        ) : null}
-      </section>
-
-      {!isCompactPreview ? (
-        <section className="min-h-0 bg-canvas">
-          <ReactFlowProvider>
-            <PreviewHeader previewStartNodeId={previewStartNodeId} />
-            <div className="h-[calc(100vh-56px)]">
-              <FlowPlayer
-                key={`wide-${previewFlow.id}`}
-                flow={previewFlow}
-                player={previewPlayer}
-              />
-            </div>
-          </ReactFlowProvider>
-        </section>
-      ) : null}
+      </main>
     </div>
   );
 }
 
-
-function PreviewHeader({ previewStartNodeId }: { previewStartNodeId: string }) {
-  return (
-    <div className="flex h-14 items-center justify-between border-b border-ink/10 bg-[#f9f6ed] px-5">
-      <div className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-[0.16em] text-moss">
-        <Play size={15} />
-        Preview from {previewStartNodeId}
-      </div>
-    </div>
-  );
-}
-
-type OutlineNodeProps = {
-  depth: number;
-  expandedNodeIds: Set<string>;
+type EditorInspectorProps = {
+  availableTags: Tag[];
+  draftState: "idle" | "saved";
   flow: ThoughtFlowFlow;
-  nodeId: string;
-  onPlayFromHere: (nodeId: string) => void;
-  onSelect: (nodeId: string) => void;
-  onToggle: (nodeId: string) => void;
-  selectedNodeId: string;
-  seenNodeIds: Set<string>;
-};
-
-function OutlineNode({
-  depth,
-  expandedNodeIds,
-  flow,
-  nodeId,
-  onPlayFromHere,
-  onSelect,
-  onToggle,
-  selectedNodeId,
-  seenNodeIds,
-}: OutlineNodeProps) {
-  const node = flow.nodes[nodeId];
-  if (!node) {
-    return null;
-  }
-
-  const isExpanded = expandedNodeIds.has(nodeId);
-  const isSelected = selectedNodeId === nodeId;
-  const nextSeenNodeIds = new Set([...seenNodeIds, nodeId]);
-
-  return (
-    <div className="mb-1" style={{ marginLeft: depth * 12 }}>
-      <div
-        className={[
-          "flex items-center gap-2 border px-2 py-2 text-left transition",
-          isSelected
-            ? "border-moss bg-leaf/15"
-            : "border-transparent hover:border-ink/10 hover:bg-white/45",
-        ].join(" ")}
-      >
-        <button
-          className="grid h-6 w-6 place-items-center text-ink/60"
-          type="button"
-          onClick={() => onToggle(nodeId)}
-        >
-          <ListTree size={14} />
-        </button>
-        <button
-          className="min-w-0 flex-1 text-left"
-          type="button"
-          onClick={() => onSelect(nodeId)}
-        >
-          <span className="block truncate text-sm font-extrabold">
-            {node.title || nodeTitleFallback(node, flow)}
-          </span>
-          <span className="block text-[11px] font-bold uppercase tracking-[0.12em] text-ink/45">
-            {node.type}
-          </span>
-        </button>
-        <button
-          className="grid h-7 w-7 place-items-center text-moss"
-          type="button"
-          title="Play from here"
-          aria-label="Play from here"
-          onClick={() => onPlayFromHere(nodeId)}
-        >
-          <Play size={15} />
-        </button>
-      </div>
-
-      {isExpanded
-        ? node.choices.map((choice) => (
-            <div className="mt-1" key={choice.id} style={{ marginLeft: 22 }}>
-              <div className="flex items-center gap-2 py-1 text-xs font-bold text-ink/55">
-                <GitBranch size={13} />
-                <span className="truncate">{choice.label}</span>
-              </div>
-              {choice.targetNodeId && !nextSeenNodeIds.has(choice.targetNodeId) ? (
-                <OutlineNode
-                  depth={depth + 1}
-                  expandedNodeIds={expandedNodeIds}
-                  flow={flow}
-                  nodeId={choice.targetNodeId}
-                  onPlayFromHere={onPlayFromHere}
-                  onSelect={onSelect}
-                  onToggle={onToggle}
-                  selectedNodeId={selectedNodeId}
-                  seenNodeIds={nextSeenNodeIds}
-                />
-              ) : (
-                <button
-                  className="ml-5 truncate text-xs font-semibold text-ink/45"
-                  type="button"
-                  onClick={() => choice.targetNodeId && onSelect(choice.targetNodeId)}
-                >
-                  {choice.targetNodeId || "Missing target"}
-                </button>
-              )}
-            </div>
-          ))
-        : null}
-    </div>
-  );
-}
-
-type NodeEditorFormProps = {
-  flow: ThoughtFlowFlow;
-  node: ThoughtFlowNode;
-  onAddChoice: () => void;
-  onAddCta: () => void;
-  onCreateConnectedNode: (choiceId: string) => void;
-  onDeleteChoice: (choiceId: string) => void;
-  onDeleteCta: (index: number) => void;
+  issues: ValidationIssue[];
+  loadFlowState: "idle" | "error";
+  saveError: string | null;
+  saveState: "idle" | "saving" | "saved" | "error";
+  selectedNode?: ThoughtFlowNode;
+  tagListState: "idle" | "error";
+  onAddChoice: (nodeId: string) => void;
+  onAddCta: (nodeId: string) => void;
+  onCreateConnectedNode: (nodeId: string, choiceId: string) => void;
   onDeleteNode: () => void;
   onDuplicateNode: () => void;
-  onPlayFromHere: (nodeId: string) => void;
-  onUpdateChoice: (choiceId: string, patch: Partial<ThoughtFlowChoice>) => void;
-  onUpdateCta: (index: number, patch: Partial<ThoughtFlowCta>) => void;
-  onUpdateNode: (patch: Partial<ThoughtFlowNode>) => void;
+  onSelectIssue: (issue: ValidationIssue) => void;
+  onSetStart: () => void;
+  onTagsChange: (tags: Tag[]) => void;
+  onTagCreated: (tag: Tag) => void;
+  onUpdateChoice: (
+    nodeId: string,
+    choiceId: string,
+    patch: Partial<ThoughtFlowChoice>,
+  ) => void;
+  onUpdateFlow: (patch: Partial<ThoughtFlowFlow>) => void;
+  onUpdateNode: (nodeId: string, patch: Partial<ThoughtFlowNode>) => void;
 };
 
-function NodeEditorForm({
+function EditorInspector({
+  availableTags,
+  draftState,
   flow,
-  node,
+  issues,
+  loadFlowState,
+  saveError,
+  saveState,
+  selectedNode,
+  tagListState,
   onAddChoice,
   onAddCta,
   onCreateConnectedNode,
-  onDeleteChoice,
-  onDeleteCta,
   onDeleteNode,
   onDuplicateNode,
-  onPlayFromHere,
+  onSelectIssue,
+  onSetStart,
+  onTagsChange,
+  onTagCreated,
   onUpdateChoice,
-  onUpdateCta,
+  onUpdateFlow,
   onUpdateNode,
-}: NodeEditorFormProps) {
-  const isActionNode = node.type === "action";
-  const canHaveChoices = node.type !== "action";
+}: EditorInspectorProps) {
+  const canHaveChoices = selectedNode?.type !== "action";
 
   return (
-    <div>
-      <div className="mb-5 flex items-start justify-between gap-3">
-        <div>
-          <p className="font-display text-3xl leading-9">
-            {node.title || nodeTitleFallback(node, flow)}
-          </p>
-          <p className="mt-1 text-xs font-bold uppercase tracking-[0.16em] text-moss">
-            Node form
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <button className="icon-button" type="button" onClick={() => onPlayFromHere(node.id)}>
-            <Play size={18} />
-          </button>
-          <button className="icon-button" type="button" onClick={onDuplicateNode}>
-            <Copy size={18} />
-          </button>
-          <button className="icon-button" type="button" onClick={onDeleteNode}>
-            <Trash2 size={18} />
-          </button>
-        </div>
-      </div>
-
-      <label className="editor-label">
-        Node type
-        <select
-          className="editor-input"
-          value={node.type}
-          onChange={(event) =>
-            onUpdateNode({
-              type: event.target.value as ThoughtFlowNodeType,
-              choices:
-                event.target.value === "action"
-                  ? []
-                  : node.choices.length > 0
-                    ? node.choices
-                    : [],
-              ctas:
-                event.target.value === "action"
-                  ? node.ctas ?? [
-                      {
-                        label: "",
-                        url: "",
-                        style: "primary",
-                      },
-                    ]
-                  : undefined,
-            })
-          }
-        >
-          {nodeTypes.map((type) => (
-            <option key={type} value={type}>
-              {type}
-            </option>
-          ))}
-        </select>
-      </label>
-
-      <label className="editor-label">
-        Title
-        <input
-          className="editor-input"
-          placeholder={
-            node.id === flow.startNodeId ? startNodeTitlePrompt : nodeTitlePrompt
-          }
-          value={node.title}
-          onChange={(event) => onUpdateNode({ title: event.target.value })}
-        />
-      </label>
-
-      <label className="editor-label">
-        Text/content
-        <textarea
-          className="editor-input min-h-36 resize-y leading-6"
-          placeholder={node.type === "question" ? startNodeTextPrompt : nodeTextPrompt}
-          value={node.text}
-          onChange={(event) => onUpdateNode({ text: event.target.value })}
-        />
-      </label>
-
-      {canHaveChoices ? (
-        <section className="mt-6">
-          <div className="mb-3 flex items-center justify-between">
-            <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-moss">
-              Choices
-            </p>
-            <button className="editor-small-button" type="button" onClick={onAddChoice}>
-              <Plus size={15} />
-              Add choice
-            </button>
-          </div>
-          <div className="space-y-3">
-            {node.choices.map((choice) => (
-              <div className="border border-ink/10 bg-canvas/55 p-3" key={choice.id}>
-                <input
-                  className="editor-input mb-2"
-                  placeholder={choiceLabelPrompt}
-                  value={choice.label}
-                  onChange={(event) =>
-                    onUpdateChoice(choice.id, { label: event.target.value })
-                  }
-                />
-                <div className="grid grid-cols-[1fr_auto_auto] gap-2">
-                  <select
-                    className="editor-input"
-                    value={choice.targetNodeId}
-                    onChange={(event) =>
-                      onUpdateChoice(choice.id, { targetNodeId: event.target.value })
-                    }
-                  >
-                    <option value="">Choose target</option>
-                    {Object.values(flow.nodes).map((target) => (
-                      <option key={target.id} value={target.id}>
-                        {targetOptionLabel(target, flow)}
-                      </option>
-                    ))}
-                  </select>
-                  <button
-                    className="editor-small-button"
-                    type="button"
-                    onClick={() => onCreateConnectedNode(choice.id)}
-                  >
-                    <FilePlus2 size={15} />
-                    New target
-                  </button>
-                  <button
-                    className="icon-button"
-                    type="button"
-                    onClick={() => onDeleteChoice(choice.id)}
-                  >
-                    <Trash2 size={17} />
-                  </button>
-                </div>
-              </div>
-            ))}
-            {node.choices.length === 0 ? (
-              <p className="border border-dashed border-ink/20 px-3 py-3 text-sm font-semibold text-ink/50">
-                No choices yet.
+    <aside className="min-h-0 overflow-y-auto bg-[#fffdf7] px-4 py-4">
+      <section className="border border-ink/10 bg-white/45 px-3 py-3">
+        <p className="mb-3 text-xs font-extrabold uppercase tracking-[0.18em] text-moss">
+          Flow details
+        </p>
+        <label className="editor-label">
+          Flow title required
+          <input
+            className="editor-input"
+            placeholder={flowTitlePrompt}
+            value={flow.title}
+            onChange={(event) => onUpdateFlow({ title: event.target.value })}
+          />
+        </label>
+        <label className="editor-label">
+          Description
+          <textarea
+            className="editor-input min-h-24 resize-y leading-6"
+            placeholder="Short description for the flow library."
+            value={flow.description ?? ""}
+            onChange={(event) => onUpdateFlow({ description: event.target.value })}
+          />
+        </label>
+        <div className="block text-[11px] font-extrabold uppercase tracking-[0.14em] text-moss">
+          <p>Tags</p>
+          <div className="mt-2 normal-case tracking-normal">
+            <TagComboBox
+              availableTags={availableTags}
+              selectedTags={flow.tags ?? []}
+              onTagsChange={onTagsChange}
+              onTagCreated={onTagCreated}
+            />
+            {tagListState === "error" ? (
+              <p className="mt-2 border border-clay/20 bg-[#fff7ea] px-2 py-2 text-xs font-bold text-clay">
+                Could not load tags.
               </p>
             ) : null}
           </div>
+        </div>
+        <p className="mt-3 truncate text-[11px] font-bold uppercase tracking-[0.12em] text-ink/45">
+          /play/{flow.slug ?? flow.id}
+        </p>
+        {saveState !== "idle" ? (
+          <p className="mt-2 text-[11px] font-extrabold uppercase tracking-[0.14em] text-moss">
+            {saveState === "saving"
+              ? "Saving..."
+              : saveState === "saved"
+                ? "Published"
+                : "Save failed"}
+          </p>
+        ) : null}
+        {saveError ? (
+          <p className="mt-2 border border-clay/25 bg-clay/10 px-2 py-2 text-xs font-bold leading-5 text-clay">
+            {saveError}
+          </p>
+        ) : null}
+        {loadFlowState === "error" ? (
+          <p className="mt-2 border border-clay/20 bg-[#fff7ea] px-2 py-2 text-xs font-bold text-clay">
+            Could not load this flow. You are editing a local draft.
+          </p>
+        ) : null}
+        {draftState === "saved" ? (
+          <p className="mt-2 text-[11px] font-bold uppercase tracking-[0.14em] text-ink/45">
+            Draft saved locally in this browser.
+          </p>
+        ) : null}
+      </section>
+
+      {selectedNode ? (
+        <section className="mt-4 border border-ink/10 bg-white/45 px-3 py-3">
+          <div className="mb-3 flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="truncate font-display text-2xl leading-7">
+                {selectedNode.id}
+              </p>
+              <p className="mt-1 truncate text-[11px] font-bold uppercase tracking-[0.16em] text-moss">
+                {selectedNode.type}
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <button
+                className="icon-button"
+                type="button"
+                title="Duplicate node"
+                aria-label="Duplicate node"
+                onClick={onDuplicateNode}
+              >
+                <Copy size={17} />
+              </button>
+              <button
+                className="icon-button"
+                type="button"
+                title="Delete node"
+                aria-label="Delete node"
+                disabled={selectedNode.id === flow.startNodeId}
+                onClick={onDeleteNode}
+              >
+                <Trash2 size={17} />
+              </button>
+            </div>
+          </div>
+
+          <label className="editor-label">
+            Node type
+            <select
+              className="editor-input"
+              value={selectedNode.type}
+              onChange={(event) =>
+                onUpdateNode(selectedNode.id, {
+                  type: event.target.value as ThoughtFlowNodeType,
+                  choices:
+                    event.target.value === "action" ? [] : selectedNode.choices,
+                  ctas:
+                    event.target.value === "action"
+                      ? selectedNode.ctas ?? [
+                          { label: "", url: "", style: "primary" },
+                        ]
+                      : undefined,
+                })
+              }
+            >
+              {nodeTypes.map((type) => (
+                <option key={type} value={type}>
+                  {type}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <div className="grid grid-cols-2 gap-2">
+            <button className="editor-small-button" type="button" onClick={onSetStart}>
+              <Play size={15} />
+              Make start
+            </button>
+            <button
+              className="editor-small-button"
+              type="button"
+              onClick={() =>
+                canHaveChoices ? onAddChoice(selectedNode.id) : onAddCta(selectedNode.id)
+              }
+            >
+              <Plus size={15} />
+              {canHaveChoices ? "Add choice" : "Add CTA"}
+            </button>
+          </div>
+
+          {canHaveChoices ? (
+            <section className="mt-5">
+              <p className="mb-3 text-xs font-extrabold uppercase tracking-[0.18em] text-moss">
+                Choice targets
+              </p>
+              <div className="space-y-3">
+                {selectedNode.choices.map((choice) => (
+                  <div className="border border-ink/10 bg-canvas/55 p-3" key={choice.id}>
+                    <p className="mb-2 truncate text-sm font-extrabold">
+                      {choice.label || "New choice"}
+                    </p>
+                    <div className="grid grid-cols-[1fr_auto] gap-2">
+                      <select
+                        className="editor-input mt-0"
+                        value={choice.targetNodeId}
+                        onChange={(event) =>
+                          onUpdateChoice(selectedNode.id, choice.id, {
+                            targetNodeId: event.target.value,
+                          })
+                        }
+                      >
+                        <option value="">Choose target</option>
+                        {Object.values(flow.nodes).map((target) => (
+                          <option key={target.id} value={target.id}>
+                            {targetOptionLabel(target, flow)}
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        className="icon-button"
+                        type="button"
+                        title="Create connected node"
+                        aria-label="Create connected node"
+                        onClick={() => onCreateConnectedNode(selectedNode.id, choice.id)}
+                      >
+                        <FilePlus2 size={16} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          ) : null}
         </section>
       ) : null}
 
-      {isActionNode ? (
-        <section className="mt-6">
-          <div className="mb-3 flex items-center justify-between">
-            <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-clay">
-              CTA buttons
-            </p>
-            <button className="editor-small-button" type="button" onClick={onAddCta}>
-              <Plus size={15} />
-              Add CTA
-            </button>
-          </div>
-          <div className="space-y-3">
-            {(node.ctas ?? []).map((cta, index) => (
-              <div className="border border-clay/15 bg-[#fff7ea] p-3" key={index}>
-                <div className="grid gap-2">
-                  <input
-                    className="editor-input"
-                    placeholder={ctaLabelPrompt}
-                    value={cta.label}
-                    onChange={(event) => onUpdateCta(index, { label: event.target.value })}
-                  />
-                  <input
-                    className="editor-input"
-                    placeholder={ctaUrlPrompt}
-                    value={cta.url}
-                    onChange={(event) => onUpdateCta(index, { url: event.target.value })}
-                  />
-                  <div className="grid grid-cols-[1fr_auto] gap-2">
-                    <select
-                      className="editor-input"
-                      value={cta.style}
-                      onChange={(event) =>
-                        onUpdateCta(index, {
-                          style: event.target.value as ThoughtFlowCta["style"],
-                        })
-                      }
-                    >
-                      <option value="primary">primary</option>
-                      <option value="secondary">secondary</option>
-                    </select>
-                    <button
-                      className="icon-button"
-                      type="button"
-                      onClick={() => onDeleteCta(index)}
-                    >
-                      <Trash2 size={17} />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-      ) : null}
-    </div>
+      <ValidationPanel issues={issues} onSelectIssue={onSelectIssue} />
+    </aside>
   );
 }
 
-function ValidationPanel({ issues }: { issues: ValidationIssue[] }) {
+function ValidationPanel({
+  issues,
+  onSelectIssue,
+}: {
+  issues: ValidationIssue[];
+  onSelectIssue: (issue: ValidationIssue) => void;
+}) {
   return (
-    <section className="mt-6 border-t border-ink/10 pt-4">
+    <section className="mt-4 border-t border-ink/10 pt-4">
       <div className="mb-3 flex items-center gap-2 text-xs font-extrabold uppercase tracking-[0.18em] text-moss">
         <AlertTriangle size={15} />
         Validation
@@ -880,11 +1007,19 @@ function ValidationPanel({ issues }: { issues: ValidationIssue[] }) {
       ) : (
         <ul className="space-y-2">
           {issues.map((issue) => (
-            <li
-              className="border border-clay/20 bg-white/55 px-3 py-2 text-sm font-semibold text-ink/70"
-              key={issue.id}
-            >
-              {issue.label}
+            <li key={issue.id}>
+              <button
+                className={[
+                  "w-full border px-3 py-2 text-left text-sm font-semibold transition hover:bg-white",
+                  issue.severity === "error"
+                    ? "border-clay/30 bg-clay/10 text-clay"
+                    : "border-ink/10 bg-white/55 text-ink/70",
+                ].join(" ")}
+                type="button"
+                onClick={() => onSelectIssue(issue)}
+              >
+                {issue.label}
+              </button>
             </li>
           ))}
         </ul>
@@ -945,6 +1080,11 @@ function flowForEditorUrl(slug: string | null): ThoughtFlowFlow {
     return makeFlowDraft();
   }
 
+  const draft = readDraft(slug);
+  if (draft?.flow) {
+    return draft.flow;
+  }
+
   return {
     ...makeFlowDraft(),
     id: slugToId(slug),
@@ -979,26 +1119,33 @@ function uniqueChoiceId(node: ThoughtFlowNode) {
   return id;
 }
 
-function toggleSetValue(values: Set<string>, value: string) {
-  const next = new Set(values);
-  if (next.has(value)) {
-    next.delete(value);
-  } else {
-    next.add(value);
-  }
-
-  return next;
-}
-
 function validateFlow(flow: ThoughtFlowFlow) {
   const issueMap = new Map<string, ValidationIssue>();
   const reachableNodeIds = collectReachableNodeIds(flow);
 
+  if (!flow.nodes[flow.startNodeId]) {
+    issueMap.set("missing-start", {
+      id: "missing-start",
+      label: "The start node is missing.",
+      severity: "error",
+    });
+  }
+
   for (const node of Object.values(flow.nodes)) {
+    if (!node.title.trim()) {
+      issueMap.set(`missing-title-${node.id}`, {
+        id: `missing-title-${node.id}`,
+        label: `${node.id} is missing a card title.`,
+        nodeId: node.id,
+        severity: "error",
+      });
+    }
+
     if (!reachableNodeIds.has(node.id)) {
       issueMap.set(`unreachable-${node.id}`, {
         id: `unreachable-${node.id}`,
-        label: `${node.title || nodeTitleFallback(node, flow)} is unreachable from the start node.`,
+        label: `${node.id} is unreachable from the start node.`,
+        nodeId: node.id,
         severity: "warning",
       });
     }
@@ -1010,7 +1157,8 @@ function validateFlow(flow: ThoughtFlowFlow) {
     ) {
       issueMap.set(`dead-${node.id}`, {
         id: `dead-${node.id}`,
-        label: `${node.title || nodeTitleFallback(node, flow)} is a dead-end ${node.type} node.`,
+        label: `${node.id} is a dead-end ${node.type} node.`,
+        nodeId: node.id,
         severity: "warning",
       });
     }
@@ -1019,7 +1167,8 @@ function validateFlow(flow: ThoughtFlowFlow) {
       if (!choice.targetNodeId || !flow.nodes[choice.targetNodeId]) {
         issueMap.set(`missing-${node.id}-${choice.id}`, {
           id: `missing-${node.id}-${choice.id}`,
-          label: `${node.title || nodeTitleFallback(node, flow)} has a choice with a missing target.`,
+          label: `${node.id} has a choice with a missing target.`,
+          nodeId: node.id,
           severity: "error",
         });
       }
@@ -1029,17 +1178,9 @@ function validateFlow(flow: ThoughtFlowFlow) {
   return [...issueMap.values()];
 }
 
-function nodeTitleFallback(node: ThoughtFlowNode, flow: ThoughtFlowFlow) {
-  return node.id === flow.startNodeId ? startNodeTitlePrompt : nodeTitlePrompt;
-}
-
 function targetOptionLabel(target: ThoughtFlowNode, flow: ThoughtFlowFlow) {
-  const title = target.title || nodeTitleFallback(target, flow);
-  const duplicateTitleCount = Object.values(flow.nodes).filter(
-    (node) => (node.title || nodeTitleFallback(node, flow)) === title,
-  ).length;
-
-  return duplicateTitleCount > 1 ? `${title} (${target.id})` : title;
+  const marker = target.id === flow.startNodeId ? "start" : target.type;
+  return `${target.id} (${marker})`;
 }
 
 function collectReachableNodeIds(flow: ThoughtFlowFlow) {
@@ -1066,6 +1207,112 @@ function collectReachableNodeIds(flow: ThoughtFlowFlow) {
   return reachableNodeIds;
 }
 
+function nextAvailablePosition(flow: ThoughtFlowFlow): ThoughtFlowNodePosition {
+  const positions = Object.values(flow.editor?.positions ?? {});
+  if (positions.length === 0) {
+    return {
+      x: Object.keys(flow.nodes).length * 120,
+      y: 720,
+    };
+  }
+
+  const rightmost = positions.reduce((max, position) =>
+    position.x > max.x ? position : max,
+  );
+  return offsetPosition(rightmost, 520, 0);
+}
+
+function offsetPosition(
+  position: ThoughtFlowNodePosition | undefined,
+  offsetX: number,
+  offsetY: number,
+): ThoughtFlowNodePosition {
+  return {
+    x: Math.round((position?.x ?? 0) + offsetX),
+    y: Math.round((position?.y ?? 0) + offsetY),
+  };
+}
+
+function removePosition(
+  positions: Record<string, ThoughtFlowNodePosition> | undefined,
+  nodeId: string,
+) {
+  if (!positions) {
+    return undefined;
+  }
+
+  const nextPositions = { ...positions };
+  delete nextPositions[nodeId];
+  return nextPositions;
+}
+
+function makeSaveInput(flow: ThoughtFlowFlow, slug: string): SavePublishedFlowInput {
+  const title = flow.title.trim();
+  const nextFlow = {
+    ...flow,
+    id: slugToId(slug),
+    slug,
+    title,
+  };
+
+  return {
+    slug,
+    title,
+    description: nextFlow.description,
+    flow: nextFlow,
+    tagIds: nextFlow.tags?.map((tag) => tag.id) ?? [],
+  };
+}
+
+function draftKey(slug: string) {
+  return `${draftStoragePrefix}:${slug}`;
+}
+
+function persistDraft(slug: string, payload: SavePublishedFlowInput) {
+  try {
+    window.localStorage.setItem(
+      draftKey(slug),
+      JSON.stringify({
+        ...payload,
+        savedAt: new Date().toISOString(),
+      }),
+    );
+  } catch {
+    // Draft persistence is best-effort; the export button remains available.
+  }
+}
+
+function readDraft(slug: string) {
+  try {
+    const value =
+      window.localStorage.getItem(draftKey(slug)) ??
+      window.localStorage.getItem(`thoughtflow-recovery:${slug}`);
+    return value ? (JSON.parse(value) as SavePublishedFlowInput & { savedAt?: string }) : null;
+  } catch {
+    return null;
+  }
+}
+
+function clearDraft(slug: string) {
+  try {
+    window.localStorage.removeItem(draftKey(slug));
+  } catch {
+    // Nothing to recover if local storage cannot be written.
+  }
+}
+
+function downloadJson(filename: string, value: unknown) {
+  const blob = new Blob([JSON.stringify(value, null, 2)], {
+    type: "application/json",
+  });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
 function slugToId(slug: string) {
   return slug.replace(/[^a-zA-Z0-9_]+/g, "_").replace(/^_+|_+$/g, "") || "flow";
 }
@@ -1082,9 +1329,11 @@ function slugify(value: string) {
 }
 
 function titleFromSlug(slug: string) {
-  return slug
-    .split("-")
-    .filter(Boolean)
-    .map((part) => part[0]?.toUpperCase() + part.slice(1))
-    .join(" ") || "Untitled Flow";
+  return (
+    slug
+      .split("-")
+      .filter(Boolean)
+      .map((part) => part[0]?.toUpperCase() + part.slice(1))
+      .join(" ") || "Untitled Flow"
+  );
 }
